@@ -79,10 +79,17 @@ Section Lottery.
        - D = [B(10%); 0(90%)]
      *)
 
-    Definition val01 : number := 0%:R / 10%:R.
+    Definition val01 : number := 1%:R / 10%:R.
     Definition val09 : number := 9%:R / 10%:R.
 
-    Lemma val_eq : val09 = 1 - val01. Admitted. (* 0.9 = 1 - 0.1 *)
+    Lemma val_eq : val09 = 1 - val01.
+    Proof.
+    Search _ (_ > 0) (_ - _)%R.
+    Search _ "subr".
+    apply/eqP; rewrite /val01 /val09 eq_sym subr_eq => //=; apply/eqP.
+    Search _ (_ / _)%R.
+    rewrite (addf_div _ _) => //=.
+    Admitted. (* 0.9 = 1 - 0.1 *)
 
     (* Sure to earn nothing *)
     Definition Z : lottery := '[0%N].
