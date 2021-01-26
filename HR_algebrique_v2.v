@@ -58,6 +58,20 @@ Section Games.
 
   End Profiles.
 
+
+  Section SNFGames.
+
+    (* Situation de jeu *)
+    Variables (N : finType)
+              (A : N -> finType).
+    (* Spécification des agents *)
+    Variables (V : N ->  Type)
+              (u : forall (i : N), profile A -> V i).
+
+    Definition SNFutility := u.
+
+  End SNFGames.
+    
   Section IIGames.
     
     (* Situation de jeu *)
@@ -77,8 +91,7 @@ Section Games.
     Definition IIutility (i : N) (t : Theta i)  (bp : bprofile Theta A) : V (E i) :=
       \big[oplus (E i)/V0 (E i)]_(omg in [pred omg | tau i omg == t])
        otimes (d i omg) (u i (proj_profile bp (mk_tprofile omg)) omg).
-       
-    
+           
   End IIGames.
 
   Section HGGames.
@@ -109,6 +122,28 @@ Section Games.
 
   End HGGames.
 
+  Section SNF_of_HG.
+    
+    (* Situation de jeu *)
+    Variables (N : finType)
+              (E : {set {set N}})
+              (A : forall (i : N), finType).
+
+    (* Spécification des agents *)
+    Variables (V : forall (i : N), Type)
+              (V0 : forall (i : N), V i)
+              (oplus : forall (i : N), Monoid.com_law (V0 i) )
+              (u : forall e i, e \in E -> i \in e -> profile A -> V i).
+
+    Check (HGutility _ _ _ _, SNFutility _ _ _).
+    Lemma SNF_of_HG :
+      HGutility oplus u = SNFutility (HGutility oplus u).
+    Proof. by auto. Qed.
+  End SNF_of_HG.
+
+
+
+  
   Section HR.
     
     (* Situation de jeu *)
