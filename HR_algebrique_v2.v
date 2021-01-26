@@ -142,6 +142,7 @@ Section Games.
       match boolP (e \in bar_E) with
       | AltTrue he =>
         match boolP (it \in e) with
+
         | AltTrue hit => \big[oplus (E i)/V0 (E i)]_(omg in omgs_of_theta theta)
                           otimes (d i omg) (u i (proj_profile bp theta) omg)
         | _ => V0 (E i)
@@ -161,6 +162,32 @@ Section Games.
       oplus (E i) = bar_oplus (existT _ i t).
     Proof. by auto. Qed.
 
+    Lemma eq_pred_omg:
+      forall i t, [set x | [pred omg | (tau i omg) == t] x] = [set x | (tau i x) == t].
+    Proof. by compute. Qed.
+
+    (*
+    Definition forget_first_arg := fun (theta : fprofile Theta) (omg : Omega) => omg.
+    Lemma forget_first_arg_ok :
+      forall theta omg, forget_first_arg theta omg = omg.
+    Proof. by compute. Qed.
+     *)
+
+    Lemma eq_pred_omg2 :
+      forall i t f, \big[oplus (E i)/V0 (E i)]_(omg in [set o | (tau i o) == t]) f omg = \big[oplus _/V0 _]_(theta in fprofile Theta) \big[oplus _/V0 _]_(omg in omgs_of_theta theta) f omg.
+    Proof.
+    move => i t f.
+    rewrite -!big_enum.
+    Check big_allpairs_dep.
+    Admitted.
+
+    Lemma theta_in_bar_E :
+      forall theta, e_theta theta \in bar_E.
+    Proof.
+    rewrite /bar_E => theta.
+    apply/imsetP.
+    exists theta => //.
+    Qed.
     
 
     Check IIutility _ _ _ _ _.
@@ -172,7 +199,12 @@ Section Games.
     rewrite /IIutility /HGutility.
     move => i t bp.
     rewrite -eq_oplus => //=.
-    (* To be continued... A table ! *)
+    rewrite -big_set eq_pred_omg eq_pred_omg2 big_imset.
+    apply eq_bigr => theta Htheta //=.
+    rewrite /u_total.
+    case (boolP (e_theta theta \in bar_E)); last by rewrite {1}theta_in_bar_E.
+    + move => Htheta_barE.
+      rewrite {1}Htheta_barE (* Dependent type error ! *).
     Admitted.
     
   End HR.
