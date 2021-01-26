@@ -67,16 +67,16 @@ Section Games.
               (tau : forall (i : N), Omega -> Theta i)
               (A : forall (i : N), finType).
     (* Spécification des agents *)
-    Variables (E : forall (i : N) (t : Theta i), eval_struct)
-              (d : forall (i : N) (t : Theta i), Omega -> W (E t))
-              (u : forall (i : N) (t : Theta i), profile A -> Omega -> U (E t)).
+    Variables (E : forall (i : N), eval_struct)
+              (d : forall (i : N), Omega -> W (E i))
+              (u : forall (i : N), profile A -> Omega -> U (E i)).
 
     Definition mk_tprofile (omg : Omega) : fprofile Theta :=
       [ffun i => tau i omg].
 
-    Definition IIutility i t  (bp : bprofile Theta A) : V (E t) :=
-      \big[oplus (E t)/V0 (E t)]_(omg in [pred omg | tau i omg == t])
-       otimes (d t omg) (u t (proj_profile bp (mk_tprofile omg)) omg).
+    Definition IIutility (i : N) (t : Theta i)  (bp : bprofile Theta A) : V (E i) :=
+      \big[oplus (E i)/V0 (E i)]_(omg in [pred omg | tau i omg == t])
+       otimes (d i omg) (u i (proj_profile bp (mk_tprofile omg)) omg).
        
     
   End IIGames.
@@ -118,9 +118,9 @@ Section Games.
               (tau : forall (i : N), Omega -> Theta i)
               (A : forall (i : N), finType).
     (* Spécification des agents *)
-    Variables (E : forall (i : N) (t : Theta i), eval_struct)
-              (d : forall (i : N) (t : Theta i), Omega -> W (E t))
-              (u : forall (i : N) (t : Theta i), profile A -> Omega -> U (E t)).
+    Variables (E : forall (i : N), eval_struct)
+              (d : forall (i : N), Omega -> W (E i))
+              (u : forall (i : N), profile A -> Omega -> U (E i)).
 
 
     Definition e_theta (theta : fprofile Theta) := [set existT Theta i (theta i) | i in N].
@@ -129,7 +129,7 @@ Section Games.
 
 
     Definition bar_N := [finType of {i : N & Theta i}].
-    Definition bar_oplus := fun it : bar_N => oplus (E (projT2 it)).
+    Definition bar_oplus := fun it : bar_N => oplus (E (projT1 it)).
     Definition bar_A := fun (it : bar_N) => A (projT1 it).
     Definition bar_E := [set e_theta theta | theta in fprofile Theta].
 
@@ -142,11 +142,11 @@ Section Games.
       match boolP (e \in bar_E) with
       | AltTrue he =>
         match boolP (it \in e) with
-        | AltTrue hit => \big[oplus (E t)/V0 (E t)]_(omg in omgs_of_theta theta)
-                          otimes (d t omg) (u t (proj_profile bp theta) omg)
-        | _ => V0 (E t)
+        | AltTrue hit => \big[oplus (E i)/V0 (E i)]_(omg in omgs_of_theta theta)
+                          otimes (d i omg) (u i (proj_profile bp theta) omg)
+        | _ => V0 (E i)
         end
-      | _ => V0 (E t)
+      | _ => V0 (E i)
       end.
 
     (* TODO utiliser les preuves que e \in bar_E et i \in e ? *)
@@ -154,17 +154,18 @@ Section Games.
       let i := projT1 it in
       let t := projT2 it in
       let theta := theta_of_e e in
-      \big[oplus (E t)/V0 (E t)]_(omg in omgs_of_theta theta)
-                          otimes (d t omg) (u t (proj_profile bp theta) omg).
+      \big[oplus (E i)/V0 (E i)]_(omg in omgs_of_theta theta)
+                          otimes (d i omg) (u i (proj_profile bp theta) omg).
                           
     Lemma eq_oplus (i : N) (t : Theta i) :
-      oplus (E t) = bar_oplus (existT _ i t).
+      oplus (E i) = bar_oplus (existT _ i t).
     Proof. by auto. Qed.
 
     
 
     Check IIutility _ _ _ _ _.
     Check HGutility _ _ _ _.
+    Check d.
     Lemma HR :
       forall i t bp, IIutility tau d u t bp = HGutility bar_oplus bar_u (existT _ i t) bp.
     Proof.
