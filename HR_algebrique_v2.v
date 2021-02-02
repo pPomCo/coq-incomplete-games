@@ -459,7 +459,36 @@ Section Games.
 
 
 
+
+  
   Section SNF_of_IIGame.
+    
+    (* Situation de jeu *)
+    Variables (N : finType)
+              (Omega : finType)
+              (Theta : N -> finType)
+              (tau : forall (i : N), Omega -> Theta i)
+              (A : forall (i : N), finType).
+
+    (* Spécification des agents *)
+    Variables (E : forall (i : N), eval_struct)
+              (d : forall (i : N), Omega -> W (E i))
+              (u : forall (i : N), profile A -> Omega -> U (E i)).
+
+
+    Definition SNF_N := [finType of {i : N & Theta i}].
+    Definition SNF_A (it : SNF_N) := A (projT1 it).
+    Definition SNF_u (it : SNF_N) (p : profile SNF_A) : V (E (projT1 it)) :=
+      IIutility tau d u (projT2 it) p.
+
+    Lemma SNF_of_IIGame :
+      forall i t bp, IIutility tau d u t bp = SNFutility SNF_u (existT _ i t) bp.
+    Proof.
+        by rewrite /SNFutility /SNF_u.
+    Qed.
+    
+    
+    
   End SNF_of_IIGame.
 
 End Games.
