@@ -33,7 +33,7 @@ End EvalStruct.
 Section Games.
 
   Section Profiles.
-    (* Profils (de stratégies, de signaux, etc. *)
+    (* Profils (de stratégies, de signaux, etc.) *)
 
     (* Domaines *)
     Variables (N : finType)
@@ -54,10 +54,11 @@ Section Games.
     Definition proj_profile (bp : bprofile) (theta : fprofile) : profile :=
       [ffun i => bp (existT _ i (theta i))].
 
+
   End Profiles.
 
 
-  
+
 
   Section SNFGames.
     (* Jeux classiques en forme normale *)
@@ -76,9 +77,13 @@ Section Games.
 
 
 
-  
+
   Section IIGames.
-    (* Jeux à information imparfaite/incomplète *)
+    (* Jeux à information imparfaite/incomplète i.e. jeux sous incertitude
+     *
+     * Définis sur les états du monde omg \in Omega ->
+     * tau i omg = theta i est le signal que i reçoit (i.e. son type)
+     *)
 
     (* Situation de jeu *)
     Variables (N : finType)
@@ -91,18 +96,108 @@ Section Games.
               (d : forall (i : N), Omega -> W (E i))
               (u : forall (i : N), profile A -> Omega -> U (E i)).
 
+    (* Crée le 'profil de signaux' theta correspondant à un état du monde omega *)
     Definition mk_tprofile (omg : Omega) : fprofile Theta :=
       [ffun i => tau i omg].
 
+    (* Utilité 'espérée' si i reçoit t *)
     Definition IIutility (i : N) (t : Theta i)  (bp : bprofile Theta A) : V (E i) :=
-      \big[oplus (E i)/V0 (E i)]_(omg in [pred omg | tau i omg == t])
+      \big[oplus (E i)/V0 (E i)]_(omg : Omega | tau i omg == t)
        otimes (d i omg) (u i (proj_profile bp (mk_tprofile omg)) omg).
-           
+
   End IIGames.
+
+
+
+
+  Section II2Games.
+    (* Jeux à information imparfaite/incomplète i.e. jeux sous incertitude
+     *
+     * Définis sur les profils de signaux theta \in Theta ->
+     * Les états du monde ne sont pas connus
+     *)
+
+    (* Situation de jeu *)
+    Variables (N : finType)
+              (Theta : N -> finType)
+              (A : N -> finType).
+    (* Spécification des agents *)
+    Variables (E : N -> eval_struct)
+              (d : forall i, profile Theta -> W (E i))
+              (u : forall i, profile A -> profile Theta -> U (E i)).
+
+    (* Utilité 'espérée' si i reçoit t *)
+    Definition II2utility (i : N) (t : Theta i) (bp : bprofile Theta A) : V (E i) :=
+      \big[oplus (E i)/V0 (E i)]_(theta : fprofile Theta | theta i == t)
+       otimes (d i theta) (u i (proj_profile bp theta) theta).
+
+
+    (* Un II2Game est un IIGame où les états du monde sont les profils de signaux. *)
+    Lemma II2_2_II :
+      forall i (t : Theta i) bp, II2utility t bp = IIutility (fun i (omg : [finType of fprofile Theta]) => omg i) d u t bp.
+    Proof.
+    move => i t bp.
+    rewrite /IIutility /II2utility.
+    apply eq_bigr => theta Htheta.
+    rewrite /mk_tprofile.
+    have th : [ffun i : N => theta i] = theta.
+    apply /ffunP => j. by rewrite ffunE.
+      by rewrite th.
+    Qed.
+
+  End II2Games.
+
+
+  Section IIGames_lemma.
+    (* Ici : lemme 'un IIGame est un II2Game où les états du monde correspondant à un même profil
+     * de signaux sont 'regroupés'
+     *
+     * On ne peut pas le faire car il faut un peu plus de th. incertitude...
+     * Grossièrement : 'addition' des 'probas' et 'marginalisation'.
+     *)
+
+
+    (* Situation de jeu *)
+    Variables (N : finType)
+              (Omega : finType)
+              (Theta : N -> finType)
+              (tau : forall (i : N), Omega -> Theta i)
+              (A : forall (i : N), finType).
+    (* Spécification des agents *)
+    Variables (E : forall (i : N), eval_struct)
+              (d : forall (i : N), Omega -> W (E i))
+              (u : forall (i : N), profile A -> Omega -> U (E i)).
+
+
+
+    (* Ici on est embêté car oplus est défini sur V et on voudrait l'avoir sur W *)
+    Definition II2_d (i : N) (theta : fprofile Theta) : W (E i). (*
+      \big[oplus (E i)/V0 (E i)]_(omg in Omega | [forall j : N, tau j omg == theta j])
+       d i omg.
+     *)
+    Admitted.
+
+    Definition II2_u (i : N) (pA : profile A) (pT : profile Theta) : U (E i).
+    (* Ici il faut conditionner / marginaliser -> il faut en savoir plus (p.ex. savoir diviser),
+       ça dépend de la th. de l'incertitude utilisée -- non modélisée *)
+    Admitted.
+
+    Check IIutility _ _ _ _ _.
+    Check II2utility _ _ _ _.
+
+    Lemma II_2_II2 :
+      forall i (t : Theta i) bp,
+      IIutility tau d u t bp = II2utility II2_d II2_u t bp.
+    Admitted.
+
+  End IIGames_lemma.
+
+
+
 
   Section HGGames.
     (* Jeux hyper-graphiques *)
-    
+
     (* Situation de jeu *)
     Variables (N : finType)
               (E : {set {set N}})
@@ -113,7 +208,6 @@ Section Games.
               (V0 : forall (i : N), V i)
               (oplus : forall (i : N), Monoid.com_law (V0 i) )
               (u : forall e i, e \in E -> i \in e -> profile A -> V i).
-
 
     (* Version "totale" de l'utilité (on donne l'élément neutre si pas d'utilité définie) *)
     Definition u_total e i p :=
@@ -128,15 +222,17 @@ Section Games.
 
     (* Utilité globale *)
     Definition HGutility (i : N) (p : profile A) : V i :=
-      \big[oplus i/V0 i]_(e in [pred e | e \in E]) u_total e i p.
+      \big[oplus i/V0 i]_(e | e \in E) u_total e i p.
 
   End HGGames.
 
 
-  
+
+
+
   Section SNF_of_HG.
     (* Tout jeu hyper-graphique correspond à un jeu en forme normale - trivial *)
-    
+
     (* Situation de jeu *)
     Variables (N : finType)
               (E : {set {set N}})
@@ -151,15 +247,45 @@ Section Games.
     Lemma SNF_of_HG :
       HGutility oplus u = SNFutility (HGutility oplus u).
     Proof. by auto. Qed.
-    
+
   End SNF_of_HG.
 
 
+  Section HG_of_SNF.
+    (* Tout jeu classique correspond à un jeu hyper-graphique -- trivial *)
 
-  
+    (* Situation de jeu *)
+    Variables (N : finType)
+              (A : N -> finType).
+    (* Spécification des agents *)
+    Variables (V : N ->  Type)
+              (u : forall (i : N), profile A -> V i).
+
+    Definition HG_V0 : forall (i : N), V i. Admitted.
+    Definition HG_oplus : forall (i : N), Monoid.com_law (HG_V0 i). Admitted.
+
+    Lemma HG_of_SNF i pA :
+      SNFutility u i pA = HGutility (E:=[set setT]) HG_oplus (fun e i He Hi => u i) i pA.
+    Proof.
+    rewrite /SNFutility /HGutility big_set1 /u_total.
+    have th : [set: N] \in [set setT]. by rewrite set11.
+    case (boolP
+          (@in_mem (Finite.sort (set_of_finType N)) (@setTfor N (Phant (Finite.sort N)))
+                   (@mem (Finite.sort (set_of_finType N)) (predPredType (Finite.sort (set_of_finType N)))
+                         (@SetDef.pred_of_set (set_of_finType N) [set setT]))))
+    => H ; last by move/negP in H.
+    case (boolP
+          (@in_mem (Finite.sort N) i (@mem (Finite.sort N) (predPredType (Finite.sort N))
+                                           (@SetDef.pred_of_set N (@setTfor N (Phant (Finite.sort N)))))))
+    => H2 ; last by move/negP in H2.
+      by auto.
+    Qed.
+  End HG_of_SNF.
+
+
   Section HR.
     (* Tout jeu à information imparfaite/incomplète correspond à un jeu hyper-graphique *)
-    
+
     (* Situation de jeu *)
     Variables (N : finType)
               (Omega : finType)
@@ -178,7 +304,7 @@ Section Games.
 
     (* États du monde correspondant à un profil de signaux *)
     Definition omgs_of_theta (theta : fprofile Theta) : {set Omega} := [set omg : Omega | [forall i : N, (tau i omg) == (theta i)]].
-    
+
 
     (* Sommets de l'hyper-graphe = couples (joueur,signal) *)
     Definition bar_N := [finType of {i : N & Theta i}].
@@ -229,13 +355,13 @@ Section Games.
     Proof. by auto. Qed.
 
 
-    
+
     Lemma eq_pred_omg:
       forall i t, [set x | [pred omg | (tau i omg) == t] x] = [set x | (tau i x) == t].
     Proof. by compute. Qed.
 
 
-    
+
     Lemma eq_pred_omg2_part i f :
        \big[oplus (E i)/V0 (E i)]_(theta in fprofile Theta) \big[oplus _/V0 _]_(omg in omgs_of_theta theta) f omg =
        \big[oplus _/V0 _]_(theta in fprofile Theta) \big[oplus _/V0 _]_(omg <- enum (omgs_of_theta theta)) f omg.
@@ -244,7 +370,7 @@ Section Games.
     Lemma eq_pred_omg2_part2 i t :
       enum [set o | tau i o == t] = [seq i2 | i1 <- enum (fprofile Theta), i2 <- enum (omgs_of_theta i1)].
     Admitted.
-    
+
     Lemma eq_pred_omg2 :
       forall i t f, \big[oplus (E i)/V0 (E i)]_(omg in [set o | (tau i o) == t]) f omg = \big[oplus _/V0 _]_(theta in fprofile Theta) \big[oplus _/V0 _]_(omg in omgs_of_theta theta) f omg.
     Proof.
@@ -252,10 +378,10 @@ Section Games.
       by rewrite eq_pred_omg2_part -!big_enum -big_allpairs_dep eq_pred_omg2_part2.
     Qed.
 
-    
+
 
     Lemma theta_in_bar_E :
-      forall theta, 
+      forall theta,
       (@in_mem (Finite.sort (set_of_finType bar_N)) (e_theta theta)
            (@mem (Finite.sort (set_of_finType bar_N)) (predPredType (Finite.sort (set_of_finType bar_N)))
               (@SetDef.pred_of_set (set_of_finType bar_N) bar_E))).
@@ -266,15 +392,15 @@ Section Games.
     Qed.
 
 
-    
-    
+
+
     Lemma theta_of_e_K :
       cancel e_theta theta_of_e.
     Admitted.
 
 
 
-    
+
     Lemma theta_ffun (theta : fprofile Theta) :
       theta = [ffun i0 => theta i0].
     Admitted.
@@ -300,7 +426,7 @@ Section Games.
 
 
 
-    
+
     Lemma HR :
       forall i t bp, IIutility tau d u t bp = HGutility bar_oplus bar_u (existT _ i t) bp.
     Proof.
@@ -328,8 +454,12 @@ Section Games.
       + move => Hcontra.
           by admit.
     Admitted.
-    
+
   End HR.
 
-    
+
+
+  Section SNF_of_IIGame.
+  End SNF_of_IIGame.
+
 End Games.
