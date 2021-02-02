@@ -452,7 +452,12 @@ Section Games.
         rewrite /mk_tprofile => //=.
           by rewrite (eq_tau_theta Homg).
       + move => Hcontra.
-          by admit.
+        * have th : existT _ i t \in e_theta theta.
+          rewrite/e_theta => /=.
+          have th2 : t = theta i. by admit. (* Pas sûr : ai-je un pb dans les defs ? *)
+            by rewrite th2 mem_imset.
+        * move/negP in Hcontra.
+            by contradiction.
     Admitted.
 
   End HR.
