@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect ssrbool finmap.
+From mathcomp Require Import all_ssreflect ssrbool finmap finset.
 From mathcomp Require Import all_algebra.
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -30,8 +30,14 @@ End EvalStruct.
 
 
 
+
+
+
+
 Section Games.
 
+
+  
   Section Profiles.
     (* Profils (de stratégies, de signaux, etc.) *)
 
@@ -54,11 +60,191 @@ Section Games.
     Definition proj_profile (bp : bprofile) (theta : fprofile) : profile :=
       [ffun i => bp (existT _ i (theta i))].
 
+    Definition move (p : profile) (i : N) (xi : X i) : profile :=
+      [ffun j => match boolP (i == j) with
+                 | AltTrue h => eq_rect _ _ xi _ (eqP h)
+                 | AltFalse _ => p j
+                 end].
+
+    Definition bmove (bp : bprofile) (i : N) (t : T i) (xi : X i) : bprofile :=
+      [ffun jt => match boolP (i == (projT1 jt)) with
+                  | AltTrue h => eq_rect _ _ xi _ (eqP h)
+                  | AltFalse _ => bp jt
+                  end].
 
   End Profiles.
 
 
 
+
+
+End Games.
+
+Module NormalForm.
+
+  Record game (player : finType) : Type :=
+    { outcome : player -> Type ;
+      preceq : forall i, rel (outcome i) ; 
+      action : player -> finType ;
+      utility : forall i, profile action -> outcome i ;
+    }.
+
+  Definition NashEq player (g : game player) : pred (profile (action g)) :=
+    fun p =>
+    [forall i : player,
+      [forall ai : action g i,
+        (ai == p i) || ~~ preceq (utility i p) (utility i (move p ai)) ]].
+
+End NormalForm.
+
+Module HGGame.
+
+  (* Hyper-graphical games with player dependant oplus operator *)
+
+  Definition set2finType (T : finType) (s : {set T}) := seq_sub_finType (enum (s)).
+
+  Record hggame (player : finType) : Type :=
+    { local_game : finType ;
+      plays : local_game -> pred player ;
+      outcome : player -> Type ;
+      outcome0 : forall i, outcome i ;
+      oplus : forall i, Monoid.com_law (outcome0 i) ;
+      preceq : forall i, rel (outcome i) ;
+      action : player -> finType ;
+      local_utility : local_game -> forall i, profile action -> outcome i ; }.
+
+  Check oplus _ _.
+  Check outcome0 _ _.
+
+  Definition global_utility player (g : hggame player) (i : player) (p : profile (action g)) :=
+    \big[oplus g i/outcome0 g i]_(lg : local_game g | plays lg i) local_utility lg i p.
+
+  Definition to_normal_form player (g : hggame player) : NormalForm.game player :=
+    {| NormalForm.outcome := outcome g ;
+       NormalForm.preceq := @preceq _ g ;
+       NormalForm.action := action g ;
+       NormalForm.utility := @global_utility _ g ; |}.
+
+  Definition NashEq player (g : hggame player) := @NormalForm.NashEq _ (to_normal_form g).
+
+  (*  
+  Record hyper_game (T I : finType) : Type :=
+    { player : I -> {set T} ;
+      local_game : forall i : I, NormalForm.game (set2finType (player i)) ; 
+      action_axiom :
+        forall t : T,
+        exists At : finType,
+        forall i : I,
+        t \in NormalForm.player (local_game i) -> NormalForm.action (local_game i) = At ; }.
+   *)
+
+End HGGame.
+
+Module BGame.
+
+  Record bgame (player : finType) : Type :=
+    { evalst : player -> eval_struct ;
+      signal : player -> finType ;
+      action : player -> finType ;
+      utility : forall i : player, profile action -> profile signal -> U (evalst i) ;
+      belief : forall i : player, profile signal -> W (evalst i) ; }.
+
+  Definition GEutility player (g : bgame player) (i : player) (t : signal g i) (p : bprofile (signal g) (action g)) :=
+    \big[oplus (evalst g i)/V0 (evalst g i)]_(theta : fprofile (signal g) | (theta i) == t)
+     otimes (belief i theta) (utility i (proj_profile p theta) theta).
+
+  Definition to_hggame player (g : bgame player) : HGGame.hggame _ :=
+    {| HGGame.local_game := [finType of fprofile (signal g)] ;
+       HGGame.plays := fun theta it => theta (projT1 it) == projT2 it ;
+       HGGame.outcome := fun it => V _ ;
+       HGGame.outcome0 := fun it => V0 _ ;
+       HGGame.oplus := fun it => oplus _ ;
+       HGGame.preceq := fun it => @preceq_V _ ;
+       HGGame.action := fun it => action g _ ;
+       HGGame.local_utility := fun theta it p => otimes (belief (projT1 it) theta) (utility (projT1 it) (proj_profile p theta) theta) ; |}.
+
+  Definition to_normal_form player (g : bgame player) : NormalForm.game _ :=
+    HGGame.to_normal_form (to_hggame g).
+
+  Definition NashEq player (g : bgame player) : pred (bprofile (signal g) (action g)) :=
+    fun bp =>
+    [forall i : player,
+      [forall ai : action g i,
+        [forall t : signal g i,
+          (ai == bp (existT _ i t)) || ~~ preceq_V (GEutility t bp) (GEutility t (bmove bp t ai)) ]]].
+  
+End BGame.
+
+Section HR.
+
+  Lemma HR :
+    forall player (g : BGame.bgame player) i t p,
+    @BGame.GEutility player g i t p = @HGGame.global_utility _ (BGame.to_hggame g) (existT _ i t) p.
+  Proof.
+  auto. (* Direct from the definitions *)
+  Qed.
+
+  Lemma HR2 :
+    forall player (g : BGame.bgame player) p,
+    BGame.NashEq p == @NormalForm.NashEq _ (BGame.to_normal_form g) p.
+  Proof.
+  move => player bg p.
+  rewrite eq_sym.
+  case (boolP (BGame.NashEq p)) ; rewrite /NormalForm.NashEq /BGame.NashEq => H.
+  - apply /eqP /forallP => it.
+    apply/forallP => a.
+    move/forallP in H.
+    have Hi := H (projT1 it) ; move/forallP in Hi.
+    have Hia := Hi a ; move/forallP in Hia.
+    move: (Hia (projT2 it)) => /=.
+    Check (sigT_eta it). (* dep type error *)
+  Admitted.
+End HR.
+
+
+
+
+
+(*
+
+
+  Definition HGGame
+             (N : finType)
+             (A : N -> finType)
+             (E : N -> eval_struct)
+             (edges : {set {set N}})
+             (u_locale : {set N} -> forall i, profile A -> V (E i)) : SNF :=
+    {| _N := N ;
+       _V := fun i => V (E i) ;
+       _A := A ;
+       _u := fun i p =>  \big[oplus (E i)/V0 (E i)]_(e | e \in edges) u_locale e i p ;
+    |}.
+
+
+
+
+    
+    Definition IIGame
+               (N : finType)
+               (Theta : N -> finType)
+               (A : N -> finType)
+               (E : N -> eval_struct)
+               (d : forall i, fprofile Theta -> W (E i))
+               (u : forall i, bprofile Theta A -> U (E i)) : SNF :=
+      HGGame (N:=[finType of {i : N & Theta i}])
+             (A:=(fun it => A (projT1 it)))
+             [set [set existT Theta i (theta i) | i  : N] | theta : fprofile Theta]
+             (fun e it p => V0 (E (projT1 it))). (* <- GEU plutôt que 0 *)
+
+
+    Check HGGame _ _.
+    Check IIGame _ _.
+
+  End AllGamesAreSNF.
+
+
+
+  
 
   Section SNFGames.
     (* Jeux classiques en forme normale *)
@@ -68,9 +254,15 @@ Section Games.
               (A : N -> finType).
     (* Spécification des agents *)
     Variables (V : N ->  Type)
+              (preceq_V : forall i, rel (V i))
               (u : forall (i : N), profile A -> V i).
 
     Definition SNFutility := u.
+
+
+    Definition PNE (p : profile A) :=
+      forall i (ai : A i),
+      ~ preceq_V (SNFutility i p) (SNFutility i (move p ai)).
 
   End SNFGames.
 
@@ -104,6 +296,11 @@ Section Games.
     Definition IIutility (i : N) (t : Theta i)  (bp : bprofile Theta A) : V (E i) :=
       \big[oplus (E i)/V0 (E i)]_(omg : Omega | tau i omg == t)
        otimes (d i omg) (u i (proj_profile bp (mk_tprofile omg)) omg).
+
+
+    Definition PBE (bp : bprofile Theta A) :=
+      forall i (t : Theta i) (ai : A i),
+      ~ preceq_V (IIutility t bp) (IIutility t (bmove bp t ai)).
 
   End IIGames.
 
@@ -319,7 +516,8 @@ Section Games.
     Definition bar_E := [set e_theta theta | theta in fprofile Theta].
 
     (* Profil de signal correspondant à un ensemble e_theta \in bar_E *)
-    Definition theta_of_e (e : {set {i : N & Theta i}}) : fprofile Theta. Admitted.
+    Definition theta_of_e (e : {set {i : N & Theta i}}) : fprofile Theta.
+    Admitted.
 
     (* Fonction d'utilité totale pour le jeu hyper-graphique *)
     Definition bar_u_total (e : {set bar_N}) (it : bar_N) bp :=
@@ -460,6 +658,21 @@ Section Games.
             by contradiction.
     Admitted.
 
+
+    Check PBE _ _ _ _.
+    Check PNE _ _ _.
+    Check HGutility _ _.
+    Lemma PNE_PBE :
+      forall bp, PBE tau d u bp -> PNE (fun it => preceq_V (e:=E (projT1 it))) (HGutility bar_oplus bar_u) bp.
+    Proof.
+    move => bp.
+    rewrite /PBE /PNE => Hpbe it ai.
+    have Hpbe2 := Hpbe (projT1 it) (projT2 it) ai.
+    rewrite SNF_of_HG /SNFutility => //=.
+    move: Hpbe2.
+    rewrite !HR.
+    Check sigT_eta it.
+    Admitted.
   End HR.
 
 
@@ -497,3 +710,4 @@ Section Games.
   End SNF_of_IIGame.
 
 End Games.
+*)
