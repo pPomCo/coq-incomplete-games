@@ -1,10 +1,10 @@
-# Algebraic incomplete games and Howson-Rosenthal-like transformation
+# Game forms and correspondances
 
 We study simultaneous games:
 
 - Games in standard normal form (NF-Game)
 - Hyper-graphical games (HG-Game)
-- Incomplete games (I-Games)
+- Incomplete games (I-Games) such as bayesian games.
 
 ## Dependencies
 
