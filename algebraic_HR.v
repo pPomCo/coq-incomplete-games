@@ -101,16 +101,33 @@ Module NormalForm.
       utility : forall i, profile action -> outcome i ;
     }.
 
-  Definition NashEq player (g : game player) : pred (profile (action g)) :=
+  Definition NashEqb player (g : game player) : pred (profile (action g)) :=
     fun p =>
     [forall i : player,
       [forall ai : action g i,
         (ai == p i) || ~~ preceq (utility i p) (utility i (move p ai)) ]].
 
-  Definition NashEq2 player (g : game player) (p : profile (action g)) : Prop :=
+  Definition NashEq player (g : game player) (p : profile (action g)) : Prop :=
     forall i : player,
     forall ai : action g i,
     ai = p i \/ (~ preceq (utility i p) (utility i (move p ai))).
+
+  Lemma NashEqP player (g : game player) (p : profile (action g)) : reflect (NashEq p) (NashEqb p).
+  Proof.
+  case (boolP (NashEqb p)) ; constructor ; move: i.
+  - move /forallP => H i ; move: (H i).
+    move /forallP => H2 ai ; move: (H2 ai).
+    move /orP ; case => H0.
+    + exact : or_introl (eqP H0).
+    + exact : or_intror (negP H0).
+  - move /forallPn => H ; destruct H ; move : H.
+    move /forallPn => H ; destruct H ; move : H.
+    move /norP ; case.
+    move /eqP => H /negPn H2 Hne.
+    have Hcontra := Hne x x0.
+    destruct Hcontra ; by contradiction.
+  Qed.
+
 
 End NormalForm.
 
@@ -142,21 +159,31 @@ Module HGGame.
        NormalForm.action := action g ;
        NormalForm.utility := @global_utility _ g ; |}.
 
+  Definition NashEqb player (g : hggame player) := @NormalForm.NashEqb _ (to_normal_form g).
   Definition NashEq player (g : hggame player) := @NormalForm.NashEq _ (to_normal_form g).
-  Definition NashEq2 player (g : hggame player) := @NormalForm.NashEq2 _ (to_normal_form g).
 
-  (*  
-  Record hyper_game (T I : finType) : Type :=
-    { player : I -> {set T} ;
-      local_game : forall i : I, NormalForm.game (set2finType (player i)) ; 
-      action_axiom :
-        forall t : T,
-        exists At : finType,
-        forall i : I,
-        t \in NormalForm.player (local_game i) -> NormalForm.action (local_game i) = At ; }.
-   *)
+
+  Lemma NashEq_HG_NFb player (g : hggame player) p :
+    NashEqb p = @NormalForm.NashEqb _ (to_normal_form g) p.
+  Proof.
+      by compute.
+  Qed.
+
+  Lemma nashEq_HG_NF player (g : hggame player) p :
+    NashEq p <-> @NormalForm.NashEq _ (to_normal_form g) p.
+  Proof.
+      by compute.
+  Qed.
 
 End HGGame.
+
+(*
+Search _ "proj".
+Require Extraction.
+Extraction proj1_sig.
+Extraction projT1.
+*)
+
 
 Module BGame.
 
@@ -184,24 +211,44 @@ Module BGame.
   Definition to_normal_form player (g : bgame player) : NormalForm.game _ :=
     HGGame.to_normal_form (to_hggame g).
 
-  Definition NashEq player (g : bgame player) : pred (bprofile (signal g) (action g)) :=
+  Definition NashEqb player (g : bgame player) : pred (bprofile (signal g) (action g)) :=
     fun bp =>
     [forall i : player,
       [forall t : signal g i,
         [forall ai : action g i,
           (ai == bp (existT _ i t)) || ~~ preceq_V (GEutility t bp) (GEutility t (bmove bp t ai)) ]]].
 
-  Definition NashEq2 player (g : bgame player) (p : bprofile (signal g) (action g)) : Prop :=
+  Definition NashEq player (g : bgame player) (p : bprofile (signal g) (action g)) : Prop :=
     forall i : player,
     forall t : signal g i,
     forall ai : action g i,
     (ai = p (existT _ i t)) \/ ~ preceq_V (GEutility t p) (GEutility t (bmove p t ai)).
-  
+
+
+  Lemma NashEqP player (g : bgame player) (p : bprofile (signal g) (action g)) :
+    reflect (NashEq p) (NashEqb p).
+  Proof.
+  case (boolP (NashEqb p)) ; constructor ; move: i.
+  - move /forallP => H i ; move: (H i).
+    move /forallP => H2 t ; move: (H2 t).
+    move /forallP => H3 ai ; move: (H3 ai).
+    move /orP ; case => H0.
+    + exact : or_introl (eqP H0).
+    + exact : or_intror (negP H0).
+  - move /forallPn => H ; destruct H ; move : H.
+    move /forallPn => H ; destruct H ; move : H.
+    move /forallPn => H ; destruct H ; move : H.
+    move /norP ; case.
+    move /eqP => H /negPn H2 Hne.
+    have Hcontra := Hne x x0 x1.
+    destruct Hcontra ; by contradiction.
+  Qed.
+
 End BGame.
 
 Section HR.
 
-  Lemma HR :
+  Lemma HowsonRosenthal :
     forall player (g : BGame.bgame player) i t p,
     @BGame.GEutility player g i t p = @HGGame.global_utility _ (BGame.to_hggame g) (existT _ i t) p.
   Proof.
@@ -211,45 +258,29 @@ Section HR.
 
 
 
-  Lemma azerty player g i t p a :
-    @bmove player (@BGame.signal player g) (fun x : Finite.sort player => Finite.sort (@BGame.action player g x)) p i t a
-    =
-    (@move
-     (@tag_finType player (@BGame.signal player g))
-     (fun x : @sigT (Finite.sort player) (fun i : Finite.sort player => Finite.sort (@BGame.signal player g i)) =>
-      Finite.sort (@BGame.action player g (@projT1 (Finite.sort player) (fun i : Finite.sort player => Finite.sort (@BGame.signal player g i)) x))) p
-     (@existT (Finite.sort player) (fun i : Finite.sort player => Finite.sort (@BGame.signal player g i)) i t) a).
+  Lemma HR2 :
+    forall player (g : BGame.bgame player),
+    let g' := BGame.to_hggame g in
+    forall  (p : bprofile (BGame.signal g) (BGame.action g)),
+    @HGGame.NashEqb _ g' p = BGame.NashEqb p.
   Proof.
-  apply eq_dffun => it.
-  case (boolP
-        (@eq_op (Finite.eqType (@tag_finType player (@BGame.signal player g)))
-                (@existT (Finite.sort player) (fun i0 : Finite.sort player => Finite.sort (@BGame.signal player g i0)) i t) it)) ;
-    case ( boolP (@eq_op (Finite.eqType player) i (@projT1 (Finite.sort player) (fun i0 : Finite.sort player => Finite.sort (@BGame.signal player g i0)) it))) => //= Hi Hit.
+  move => player g g' p.
+  Set Printing All.
+  rewrite /g'.
+  Unset Printing All.
+  apply /NormalForm.NashEqP => /=.
+  case (boolP (BGame.NashEqb p)).
+  - move /BGame.NashEqP => H it ai //=.
+    move : (H _ (projT2 it) ai) => H2 ; destruct H2.
+    + apply or_introl ; move : H0 => ->.
+        by rewrite (sigT_eta it).
+    + apply or_intror.
+      move : H0 ; rewrite !HowsonRosenthal -move_bmove.
+      Check (sigT_eta it). (* dep type error *)-
+        by admit.
   - by admit.
-  - have Hit' := Hit.
-    have Hi' := Hi.
-    move/eqP in Hit'.
-    rewrite -Hit' in Hi'.
-    move: Hi' => //=.
-      by rewrite eqxx.
-  - have Hi' := Hi.
-    move/eqP in Hi'.
-      by admit.
   Admitted.
 
-
-      
-  Lemma HR2 :
-    forall player (g : BGame.bgame player) p,
-    @NormalForm.NashEq2 _ (BGame.to_normal_form g) p -> BGame.NashEq2 p.
-  Proof.
-  rewrite /BGame.NashEq2  /NormalForm.NashEq2.  
-  move => player g p HNF i t a.
-  move: (HNF (existT _ i t) a).
-  rewrite !HR.
-  (* Check move_bmove _.  <<-- What TODO? *)
-  rewrite azerty => //=.
-  Qed.
 
 End HR.
 
