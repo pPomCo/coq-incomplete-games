@@ -74,8 +74,7 @@ Section Games.
 
   End Profiles.
 
-
-  Check bmove.
+  (*
   Lemma move_bmove (N : finType) (T : N -> finType) (X : N -> Type) :
     forall (p : profile (fun it : tag_finType _ => _)) (i : N) (t : T i) (xi : X i),
     @move (tag_finType T) _ p (existT _ i t) xi = @bmove N T X p _ t xi.
@@ -83,7 +82,7 @@ Section Games.
   move => p i t xi.
   apply eq_dffun => //= it.
   Admitted.
-
+   *)
   
 End Games.
 
@@ -92,7 +91,7 @@ End Games.
 
 
 
-Module NormalForm.
+Module NFGame.
 
   Record game (player : finType) : Type :=
     { outcome : player -> Type ;
@@ -127,7 +126,7 @@ Module NormalForm.
   Qed.
 
 
-End NormalForm.
+End NFGame.
 
 Module HGGame.
 
@@ -151,28 +150,28 @@ Module HGGame.
   Definition global_utility player (g : hggame player) (i : player) (p : profile (action g)) :=
     \big[oplus g i/outcome0 g i]_(lg : local_game g | plays lg i) local_utility lg i p.
 
-  Definition to_normal_form player (g : hggame player) : NormalForm.game player :=
-    {| NormalForm.outcome := outcome g ;
-       NormalForm.preceq := @preceq _ g ;
-       NormalForm.action := action g ;
-       NormalForm.utility := @global_utility _ g ; |}.
+  Definition to_normal_form player (g : hggame player) : NFGame.game player :=
+    {| NFGame.outcome := outcome g ;
+       NFGame.preceq := @preceq _ g ;
+       NFGame.action := action g ;
+       NFGame.utility := @global_utility _ g ; |}.
 
-  Definition NashEqb player (g : hggame player) := @NormalForm.NashEqb _ (to_normal_form g).
-  Definition NashEq player (g : hggame player) := @NormalForm.NashEq _ (to_normal_form g).
+  Definition NashEqb player (g : hggame player) := @NFGame.NashEqb _ (to_normal_form g).
+  Definition NashEq player (g : hggame player) := @NFGame.NashEq _ (to_normal_form g).
 
   Lemma NashEqP player (g : hggame player) (p : profile (action g)) : reflect (NashEq p) (NashEqb p).
   Proof.
-  exact: NormalForm.NashEqP.
+  exact: NFGame.NashEqP.
   Qed.
 
   Lemma NashEq_HG_NFb player (g : hggame player) p :
-    NashEqb p = @NormalForm.NashEqb _ (to_normal_form g) p.
+    NashEqb p = @NFGame.NashEqb _ (to_normal_form g) p.
   Proof.
       by compute.
   Qed.
 
   Lemma nashEq_HG_NF player (g : hggame player) p :
-    NashEq p <-> @NormalForm.NashEq _ (to_normal_form g) p.
+    NashEq p <-> @NFGame.NashEq _ (to_normal_form g) p.
   Proof.
       by compute.
   Qed.
@@ -210,7 +209,7 @@ Module BGame.
        HGGame.action := fun it => action g _ ;
        HGGame.local_utility := fun theta it p => otimes (belief (projT1 it) theta) (utility (projT1 it) (proj_profile p theta) theta) ; |}.
 
-  Definition to_normal_form player (g : bgame player) : NormalForm.game _ :=
+  Definition to_normal_form player (g : bgame player) : NFGame.game _ :=
     HGGame.to_normal_form (to_hggame g).
 
   Definition NashEqb player (g : bgame player) : pred (bprofile (signal g) (action g)) :=
@@ -254,7 +253,7 @@ Section HR.
     forall player (g : BGame.bgame player) i t p,
     @BGame.GEutility player g i t p = @HGGame.global_utility _ (BGame.to_hggame g) (existT _ i t) p.
   Proof.
-  auto. (* Direct from the definitions *)
+      by []. (* Direct from the definitions *)
   Qed.
 
 
@@ -270,14 +269,14 @@ Section HR.
   Set Printing All.
   rewrite /g'.
   Unset Printing All.
-  apply /NormalForm.NashEqP => /=.
+  apply /NFGame.NashEqP => /=.
   case (boolP (BGame.NashEqb p)).
   - move /BGame.NashEqP => H it ai //=.
     move : (H _ (projT2 it) ai) => H2 ; destruct H2.
     + apply or_introl ; move : H0 => ->.
         by rewrite (sigT_eta it).
     + apply or_intror.
-      move : H0 ; rewrite !HowsonRosenthal -move_bmove.
+      move : H0 ; rewrite !HowsonRosenthal (* -move_bmove *).
       Check (sigT_eta it). (* dep type error *)-
         by admit.
   - by admit.
