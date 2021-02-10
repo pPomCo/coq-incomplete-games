@@ -91,6 +91,7 @@ End Games.
 
 
 
+
 Module NFGame.
 
   Record game (player : finType) : Type :=
@@ -246,6 +247,45 @@ Module BGame.
   Qed.
 
 End BGame.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Section Examples.
+
+  Definition coordination_game : NFGame.game [finType of 'I_2] :=
+    {| NFGame.outcome := fun _ => nat ;
+       NFGame.preceq := fun _ => ltn ;
+       NFGame.action := fun _ => bool_finType ;
+       NFGame.utility := fun _ p => if [forall i, p i] then 1 else 0
+    |}.
+
+  Eval compute in  NFGame.action coordination_game (inord 0).
+
+  Lemma coord_NashEq1 :
+    @NFGame.NashEq _ coordination_game [ffun _ => true].
+  Proof.
+  Admitted.
+
+  Lemma coord_NashEq2 :
+    @NFGame.NashEq _ coordination_game [ffun _ => false].
+  Admitted.
+
+End Examples.
+
+
+
+
+
 
 Section HR.
 
