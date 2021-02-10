@@ -108,8 +108,7 @@ Module NormalForm.
         (ai == p i) || ~~ preceq (utility i p) (utility i (move p ai)) ]].
 
   Definition NashEq player (g : game player) (p : profile (action g)) : Prop :=
-    forall i : player,
-    forall ai : action g i,
+    forall (i : player) (ai : action g i),
     ai = p i \/ (~ preceq (utility i p) (utility i (move p ai))).
 
   Lemma NashEqP player (g : game player) (p : profile (action g)) : reflect (NashEq p) (NashEqb p).
@@ -124,8 +123,7 @@ Module NormalForm.
     move /forallPn => H ; destruct H ; move : H.
     move /norP ; case.
     move /eqP => H /negPn H2 Hne.
-    have Hcontra := Hne x x0.
-    destruct Hcontra ; by contradiction.
+    destruct (Hne x x0) ; by contradiction.
   Qed.
 
 
@@ -162,6 +160,10 @@ Module HGGame.
   Definition NashEqb player (g : hggame player) := @NormalForm.NashEqb _ (to_normal_form g).
   Definition NashEq player (g : hggame player) := @NormalForm.NashEq _ (to_normal_form g).
 
+  Lemma NashEqP player (g : hggame player) (p : profile (action g)) : reflect (NashEq p) (NashEqb p).
+  Proof.
+  exact: NormalForm.NashEqP.
+  Qed.
 
   Lemma NashEq_HG_NFb player (g : hggame player) p :
     NashEqb p = @NormalForm.NashEqb _ (to_normal_form g) p.
