@@ -26,6 +26,12 @@ Section EvalStruct.
       otimes : W -> U -> V ;
     }.
 
+
+  
+  Definition prec T (preceq : rel T) : rel T :=
+    fun t1 t2 => (preceq t1 t2) && ~~ (preceq t2 t1).
+
+
 End EvalStruct.
 
 
@@ -69,20 +75,34 @@ Section Games.
     Definition proj_iprofile N (T : N -> finType) X (p : iprofile T X) (theta : profile T) : profile X :=
       fun i => p i (theta i).
 
+    (*
+    Lemma iprofile_flattenE N T X (p : iprofile T X) (i : N) (ti : T i) :
+      p i ti = (iprofile_flatten p) (existT _ i ti).
+    Proof.
+        by [].
+    Qed.
+     *)
 
+    (*
+    Lemma iprofile_flattenE' N T X (p : iprofile T X) (it : {i : N & T i}) :
+      p (projT1 it) (projT2 it) = (iprofile_flatten p) it.
+    Proof.
+        by [].
+    Qed.
+     *)
+    
+    (*
     Lemma proj_iprof_flatprof N (T : N -> finType) X (p : iprofile T X) theta :
       forall j, (proj_iprofile p theta) j = (proj_flatprofile (iprofile_flatten p) theta) j.
     Proof.
         by [].
     Qed.
-    
-    
-    Check eq_rect _ _ _ _ _.
-    
+     *)
+        
+    (*
     Definition bmove' N T X (p : iprofile T X) (i : N) (ti : T i) (xi : X i) : iprofile T X.
     move => j tj.
     case (boolP (i == j)) => Hi.
-    Check eq_sym _ _.
     have Hj := Hi ; rewrite eq_sym in Hj.
     - have ti' := eq_rect _ T ti _ (eqP Hi).
       case (boolP (ti' == tj)) => Htj.
@@ -90,8 +110,8 @@ Section Games.
       + exact : p j tj.
     - exact : p j tj.
     Defined.
-    Print bmove'.
-
+     *)
+    
     Definition bmove N T X (p : iprofile T X) (i : N) (ti : T i) (xi : X i) : iprofile T X :=
       fun j tj => match boolP (i == j) with
                   | AltTrue h =>
@@ -100,9 +120,61 @@ Section Games.
                   | AltFalse _ => p j tj
                   end.
 
+    (*
+    Lemma move_bmoveE N T X (p : iprofile T X) (i : N) (ti : T i) (xi : X i) :
+      forall (it' : {i : N & T i}),
+      (@move _ _ (iprofile_flatten p) (existT _ i ti) xi) it' = (iprofile_flatten (bmove p ti xi)) it'.
+    Proof.
+    Admitted.
+     *)
 
-    Lemma move_bmove N T X (p : iprofile T X) (i : N) (ti : T i) xi :
-      (@move _ _ (iprofile_flatten p) (existT _ i ti) xi) = (iprofile_flatten (bmove p ti xi)).
+    Definition eq_profile N (X : N -> Type) (p1 p2 : profile X) :
+      p1 = p2 <-> forall i, p1 i = p2 i.
+    Admitted.      
+    
+    Lemma move_bmove N T X (p : iprofile T X) (it : {i : N & T i}) (xi : X (projT1 it)) :
+      (@move _ _ (iprofile_flatten p) it xi) = (iprofile_flatten (bmove p (projT2 it) xi)).
+    Proof.
+    rewrite /move /bmove /iprofile_flatten.
+    rewrite eq_profile => it' //=.
+
+    case (boolP (@eq_op (Finite.eqType _) it it')) => //= H ; case (boolP (@eq_op _ (projT1 it) (projT1 it'))) => H2.
+    - case (boolP ( @eq_op (Finite.eqType (T (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')))
+                           (@eq_rect (Finite.sort N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it) (fun x : Finite.sort N => Finite.sort (T x))
+                                     (@projT2 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
+                                     (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')
+                                     (@elimT
+                                      (@eq (Finite.sort N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
+                                           (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it'))
+                                      (@eq_op (Finite.eqType N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
+                                              (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it'))
+                                      (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
+                                            (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')) H2))
+                           (@projT2 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it'))) => H3.
+      + Search _ (eq_rect _ _ _ _ _ = eq_rect _ _ _ _ _).
+        rewrite (rew_map X (@projT1 _ _) (eqP H) xi).
+        have th : f_equal (@projT1 _ _) (eqP H) = eqP H2. by admit.
+          by rewrite th.
+      + by admit.
+    - have := H2.
+      have H' := H ; move/eqP in H'.
+      move/eqP ; rewrite {1}H'.
+      contradiction.
+    - case (boolP ( @eq_op (Finite.eqType (T (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')))
+                      (@eq_rect (Finite.sort N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it) (fun x : Finite.sort N => Finite.sort (T x))
+                                (@projT2 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
+                                (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')
+                                (@elimT
+                                 (@eq (Finite.sort N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
+                                      (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it'))
+                                 (@eq_op (Finite.eqType N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
+                                         (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it'))
+                                 (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
+                                       (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')) H2))
+                      (@projT2 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it'))) => H3.
+      + by admit.
+      + by admit.
+    - by [].
     Admitted.
 
     
@@ -193,6 +265,9 @@ End Games.
 
 
 
+  
+
+
 
 
 Module NFGame.
@@ -204,31 +279,26 @@ Module NFGame.
       preceq : forall i, rel (outcome i) ; 
     }.
 
-  (* Ordre : irreflexif ? *)
-  
   Definition NashEqb player (g : game player) : pred (profile (action g)) :=
     fun p =>
     [forall i : player,
       [forall ai : action g i,
-        (ai == p i) || ~~ preceq (utility i p) (utility i (move p ai)) ]].
+        ~~ prec (@preceq _ _ _) (utility i p) (utility i (move p ai)) ]].
 
   Definition NashEq player (g : game player) (p : profile (action g)) : Prop :=
     forall (i : player) (ai : action g i),
-    ai = p i \/ (~ preceq (utility i p) (utility i (move p ai))).
+    ~ prec (@preceq _ _ _) (utility i p) (utility i (move p ai)).
 
   Lemma NashEqP player (g : game player) (p : profile (action g)) : reflect (NashEq p) (NashEqb p).
   Proof.
   case (boolP (NashEqb p)) ; constructor ; move: i.
   - move /forallP => H i ; move: (H i).
-    move /forallP => H2 ai ; move: (H2 ai).
-    move /orP ; case => H0.
-    + exact : or_introl (eqP H0).
-    + exact : or_intror (negP H0).
+    move /forallP => H2 ai ; move: (H2 ai) => H0.
+      exact : (negP H0).
   - move /forallPn => H ; destruct H ; move : H.
     move /forallPn => H ; destruct H ; move : H.
-    move /norP ; case.
-    move /eqP => H /negPn H2 Hne.
-    destruct (Hne x x0) ; by contradiction.
+    move /negPn => H Hne.
+      by destruct (Hne x x0).
   Qed.
 
 
@@ -326,13 +396,13 @@ Module BGame.
     [forall i : player,
       [forall t : signal g i,
         [forall ai : action g i,
-          (ai == bp i t) || ~~ preceq_V (GEutility t bp) (GEutility t (bmove bp t ai)) ]]].
+          ~~ prec (@preceq_V _) (GEutility t bp) (GEutility t (bmove bp t ai)) ]]].
 
   Definition NashEq player (g : bgame player) (p : iprofile (signal g) (action g)) : Prop :=
     forall i : player,
     forall t : signal g i,
     forall ai : action g i,
-    (ai = p i t) \/ ~ preceq_V (GEutility t p) (GEutility t (bmove p t ai)).
+    ~ prec (@preceq_V _) (GEutility t p) (GEutility t (bmove p t ai)).
 
 
   Lemma NashEqP player (g : bgame player) (p : iprofile (signal g) (action g)) :
@@ -341,17 +411,14 @@ Module BGame.
   case (boolP (NashEqb p)) ; constructor ; move: i.
   - move /forallP => H i ; move: (H i).
     move /forallP => H2 t ; move: (H2 t).
-    move /forallP => H3 ai ; move: (H3 ai).
-    move /orP ; case => H0.
-    + exact : or_introl (eqP H0).
-    + exact : or_intror (negP H0).
+    move /forallP => H3 ai ; move: (H3 ai) => H0.
+      exact : negP H0.
   - move /forallPn => H ; destruct H ; move : H.
     move /forallPn => H ; destruct H ; move : H.
     move /forallPn => H ; destruct H ; move : H.
-    move /norP ; case.
-    move /eqP => H /negPn H2 Hne.
+    move /negPn => H2 Hne.
     have Hcontra := Hne x x0 x1.
-    destruct Hcontra ; by contradiction.
+      by contradiction.
   Qed.
 
 End BGame.
@@ -382,6 +449,8 @@ Section Examples.
   Lemma coord_NashEq1 :
     @NFGame.NashEq _ coordination_game [ffun _ => true].
   Proof.
+  rewrite /NFGame.NashEq /NFGame.utility => i ai.
+  
   Admitted.
 
   Lemma coord_NashEq2 :
@@ -389,6 +458,21 @@ Section Examples.
   Admitted.
 
 End Examples.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -416,18 +500,10 @@ Section HR.
   apply /NFGame.NashEqP /BGame.NashEqP => /=.
   - rewrite /NFGame.NashEq /BGame.NashEq => /= H i t ai.
     move : (H (existT _ i t) ai).
-    Check move_bmove.
-      by rewrite {1}/iprofile_flatten !HowsonRosenthal -move_bmove => //=.
+      by rewrite {1}/iprofile_flatten !HowsonRosenthal move_bmove => //=.
   - rewrite /NFGame.NashEq /BGame.NashEq => /= H it ai.
-    move : (H (projT1 it) (projT2 it) ai).
-    rewrite {1}/iprofile_flatten !HowsonRosenthal -move_bmove => H2 //=.
-    case H2 => H3.
-    + exact : (or_introl H3).
-    + apply or_intror => Hcontra.
-      apply : H3.
-      move : (sigT_eta it) ; move /eqP ; rewrite eq_sym ; move/eqP => Hsig.
-      (* rewrite Hsig ; exact : Hcontra *) (* dependent type error *)
-  Admitted.      
-
+    have H' := (H (projT1 it) (projT2 it) ai).
+      by rewrite {1 2 3 4}(sigT_eta it) move_bmove -!HowsonRosenthal.
+  Qed.
 
 End HR.
