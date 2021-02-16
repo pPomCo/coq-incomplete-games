@@ -441,20 +441,19 @@ Section Examples.
     {| NFGame.outcome := fun _ => nat ;
        NFGame.preceq := fun _ => ltn ;
        NFGame.action := fun _ => bool_finType ;
-       NFGame.utility := fun _ p => if [forall i, p i] then 1 else 0
+       NFGame.utility := fun _ p => if p (inord 0) == p (inord 1) then 1 else 0
     |}.
 
   Eval compute in  NFGame.action coordination_game (inord 0).
 
   Lemma coord_NashEq1 :
-    @NFGame.NashEq _ coordination_game [ffun _ => true].
+    @NFGame.NashEq _ coordination_game (fun _ => true).
   Proof.
   rewrite /NFGame.NashEq /NFGame.utility => i ai.
-  
   Admitted.
 
   Lemma coord_NashEq2 :
-    @NFGame.NashEq _ coordination_game [ffun _ => false].
+    @NFGame.NashEq _ coordination_game (fun _ => false).
   Admitted.
 
 End Examples.
