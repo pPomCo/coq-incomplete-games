@@ -439,22 +439,40 @@ Section Examples.
 
   Definition coordination_game : NFGame.game [finType of 'I_2] :=
     {| NFGame.outcome := fun _ => nat ;
-       NFGame.preceq := fun _ => ltn ;
+       NFGame.preceq := fun _ => leq ;
        NFGame.action := fun _ => bool_finType ;
        NFGame.utility := fun _ p => if p (inord 0) == p (inord 1) then 1 else 0
     |}.
 
   Eval compute in  NFGame.action coordination_game (inord 0).
 
-  Lemma coord_NashEq1 :
-    @NFGame.NashEq _ coordination_game (fun _ => true).
+  Lemma prec_leq i j : prec leq i j = ltn i j.
   Proof.
-  rewrite /NFGame.NashEq /NFGame.utility => i ai.
+  rewrite /prec => //=.
+  case (boolP (i < j)) => Hltn.
+  Search _ "ltn" "le".
+  - rewrite ltn_neqAle in Hltn.
+    move/andP in Hltn. destruct Hltn.
+      by rewrite -ltnNge (ltn_neqAle i j) H H0.
+  - by admit.
   Admitted.
+  
 
+  Lemma coord_NashEq1 :
+    @NFGame.NashEq _ coordination_game xpredT.
+  Proof.
+  rewrite /NFGame.NashEq => i ai /=.
+  rewrite prec_leq.
+    by case (move xpredT ai (@inord 1 0) == move xpredT ai (@inord 1 1)).
+  Qed.
+  
   Lemma coord_NashEq2 :
-    @NFGame.NashEq _ coordination_game (fun _ => false).
-  Admitted.
+    @NFGame.NashEq _ coordination_game xpred0.
+  Proof.
+  rewrite /NFGame.NashEq => i ai /=.
+  rewrite prec_leq.
+    by case (move xpred0 ai (@inord 1 0) == move xpred0 ai (@inord 1 1)).
+  Qed.
 
 End Examples.
 
