@@ -21,6 +21,11 @@ jobs:
         with:
           custom_image: ${{ matrix.image }}
           custom_script: |
+            # TODO remove this step after the single-switch migration
+            startGroup 'Set opam switch'
+              opam switch 4.07.1+flambda
+              eval $(opam env)
+            endGroup
             startGroup 'Print opam config'
               opam config list; opam repo list; opam list
             endGroup
