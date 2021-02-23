@@ -1,0 +1,25 @@
+opam-version: "2.0"
+version: "dev"
+
+maintainer: "Pierre Pomeret-Coquot <pierre.pomeret@irit.fr>"
+homepage: "https://github.com/pPomCo/coq-incomplete-games-rjcia2021"
+dev-repo: "git+https://github.com/pPomCo/coq-incomplete-games-rjcia2021.git"
+bug-reports: "https://github.com/pPomCo/coq-incomplete-games-rjcia2021/issues"
+license: "MIT"
+
+synopsis: "Algebraic Incomplete Games"
+description: """
+Algebraic Howson-Rosenthal-like transformation
+"""
+
+build: [make "-j%{jobs}%"]
+install: [make "install"]
+
+depends: [
+  "coq" {>= "8.11"}
+  "coq-mathcomp-algebra" {>= "1.10.0"}
+]
+
+authors: [
+  "Pierre Pomeret-Coquot"
+]

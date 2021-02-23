@@ -33,3 +33,5 @@ nia.cache
 nlia.cache
 nra.cache
 *~
+Makefile.coq
+Makefile.coq.conf

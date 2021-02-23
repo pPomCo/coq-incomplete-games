@@ -1,13 +1,10 @@
-From mathcomp Require Import all_ssreflect ssrbool finmap finset.
+From Coq Require Import ssreflect.
+From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
-
-
-
-
 
 
 Section EvalStruct.
@@ -151,7 +148,7 @@ Section Games.
                                       (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
                                             (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')) H2))
                            (@projT2 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it'))) => H3.
-      + Search _ (eq_rect _ _ _ _ _ = eq_rect _ _ _ _ _).
+      + (* Search _ (eq_rect _ _ _ _ _ = eq_rect _ _ _ _ _). *)
         rewrite (rew_map X (@projT1 _ _) (eqP H) xi).
         have th : f_equal (@projT1 _ _) (eqP H) = eqP H2. by admit.
           by rewrite th.
@@ -320,8 +317,8 @@ Module HGGame.
       action : player -> finType ;
       local_utility : local_game -> forall i, profile action -> outcome i ; }.
 
-  Check oplus _ _.
-  Check outcome0 _ _.
+  (* Check oplus _ _.
+  Check outcome0 _ _. *)
 
   Definition global_utility player (g : hggame player) (i : player) (p : profile (action g)) :=
     \big[oplus g i/outcome0 g i]_(lg : local_game g | plays lg i) local_utility lg i p.
@@ -450,7 +447,7 @@ Section Examples.
   Proof.
   rewrite /prec => //=.
   case (boolP (i < j)) => Hltn.
-  Search _ "ltn" "le".
+  (* Search _ "ltn" "le". *)
   - rewrite ltn_neqAle in Hltn.
     move/andP in Hltn. destruct Hltn.
       by rewrite -ltnNge (ltn_neqAle i j) H H0.
