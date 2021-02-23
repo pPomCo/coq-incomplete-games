@@ -8,6 +8,14 @@ Unset Printing Implicit Defensive.
 
 
 
+Lemma finType_decidable (T : finType) :
+  forall t1 t2 : T, t1 = t2 \/ t1 <> t2.
+Proof.
+move => t1 t2.
+case (boolP (t1 == t2)) => /eqP H.
+- by apply or_introl.
+- by apply or_intror.
+Qed.
 
 
 Section EvalStruct.
@@ -184,10 +192,7 @@ Section Games.
               eqP H2))
         (@projT2 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it'))) => H3.
       + rewrite (rew_map X (@projT1 _ _) (eqP H1) xi).
-        rewrite (Eqdep_dec.eq_proofs_unicity _ (f_equal _ (eqP H1))(eqP H2)) => //= x y.
-        case (boolP (x == y)) => /eqP H.
-        * by apply or_introl.
-        * by apply or_intror.
+          by rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (f_equal _ (eqP H1))(eqP H2)) => //= x y.
       + by admit.
     - move /eqP in H2.
       have Hcontra := projT1_eq (eqP H1).
