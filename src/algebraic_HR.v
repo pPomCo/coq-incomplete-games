@@ -24,7 +24,7 @@ End GeneralLemmae.
 
 Section EvalStruct.
 
-  (* Evaluation structure: contains domains, orders and operators for GEU *)
+  (* Evaluation structure: domains, orders and operators for GEU *)
 
   Record eval_struct : Type :=
     { U : finType ;
@@ -58,7 +58,7 @@ Section Games.
     Implicit Type (N : finType).
 
     (* Profile for classical games *)
-    Definition profile N (X : N -> eqType) := {dffun forall i, X i}.
+    Definition profile (N : finType) (X : N -> eqType) := {dffun forall i, X i}.
 
     (* Finite profile *)
     Definition fprofile N (X : N -> finType) := {dffun forall i, X i}.
@@ -76,63 +76,74 @@ Section Games.
     Definition iprofile N (T : N -> finType) (X : N -> eqType) :=
       {dffun forall i, T i -> X i}.
 
-    Definition iprofile_flatten N (T : N -> finType) X (p : iprofile T X) : profile (fun it : tag_finType T => X (projT1 it)) :=
+    Definition iprofile_flatten N (T : N -> finType) X (p : iprofile T X)
+      : profile (fun it => X (projT1 it)) :=
       [ffun it => p (projT1 it) (projT2 it)].
 
-    Definition proj_iprofile N (T : N -> finType) X (p : iprofile T X) (theta : profile T) : profile X :=
-      [ffun i => p i (theta i)].
+    Definition proj_iprofile N (T : N -> finType) X (p : iprofile T X)
+      : profile T -> profile X :=
+      fun theta => [ffun i => p i (theta i)].
 
-    Definition proj_flatprofile N (T : N -> finType) X (p : profile (fun it : {i : N & T i} => X (projT1 it))) (theta : profile T) : profile X :=
-      [ffun i => p (existT _ i (theta i))].
+    Definition proj_flatprofile N (T : N -> finType) X
+               (p : profile (fun it => X (projT1 it)))
+      : profile T -> profile X :=
+      fun theta => [ffun i => p (existT _ i (theta i))].
 
     Lemma proj_iprof_flatprof N (T : N -> finType) X (p : iprofile T X) theta :
       (proj_iprofile p theta) = (proj_flatprofile (iprofile_flatten p) theta).
     Proof.
-    apply eq_dffun => i.
-      by rewrite ffunE.
+    by apply eq_dffun => i ; rewrite ffunE.
     Qed.
 
     
-    Definition bmove N T X (p : iprofile T X) (i : N) (ti : T i) (xi : X i) : iprofile T X :=
+    Definition bmove N T X (p : iprofile T X) (i : N) (ti : T i) (xi : X i)
+      : iprofile T X :=
       [ffun j => fun tj => match boolP (i == j) with
                            | AltTrue h =>
                              let ti' := eq_rect _ T ti _ (eqP h) in
-                             if ti' == tj then eq_rect i X xi j (eqP h) else p j tj
+                               if ti' == tj
+                               then eq_rect i X xi j (eqP h)
+                               else p j tj
                            | AltFalse _ => p j tj
                            end].
 
 
 
-    Lemma move_bmove N T X (p : iprofile T X) (it : {i : N & T i}) (xi : X (projT1 it)) :
-      (@move _ _ (iprofile_flatten p) it xi) = (iprofile_flatten (bmove p (projT2 it) xi)).
+    Lemma move_bmove N T X (p : iprofile T X) (it : {i : N & T i})
+          (xi : X (projT1 it)) :
+      (@move _ _ (iprofile_flatten p) it xi)
+      = (iprofile_flatten (bmove p (projT2 it) xi)).
     Proof.
     rewrite /move /bmove /iprofile_flatten.
     apply eq_dffun => it' //=.
     rewrite ffunE.
-    case (boolP (@eq_op (Finite.eqType (@tag_finType N T)) it it')) => H1 ; case (boolP (projT1 it == projT1 it')) => H2.
+    case (boolP (@eq_op (Finite.eqType (tag_finType T)) it it')) => H1 ;
+                          case (boolP (projT1 it == projT1 it')) => H2.
     - case (boolP ( @eq_op (Finite.eqType (T (projT1 it')))
-                           (eq_rect (projT1 it) _ (projT2 it) (projT1 it')
-                                    (@elimT (@eq (Finite.sort N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
-                                            (@eq_op (Finite.eqType N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
-                                            (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
-                                            H2))
-                           (projT2 it'))) => H3.
+           (eq_rect (projT1 it) _ (projT2 it) (projT1 it')
+               (@elimT (@eq (Finite.sort N) (projT1 it) (projT1 it'))
+                       (@eq_op (Finite.eqType N) (projT1 it) (projT1 it'))
+                       (@eqP (Finite.eqType N) (projT1 it) (projT1 it'))
+                       H2))
+           (projT2 it'))) => H3.
       + rewrite (rew_map X (@projT1 _ _) (eqP H1) xi).
-          by rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (f_equal _ (eqP H1))(eqP H2)) => //= x y.
+          by rewrite (Eqdep_dec.eq_proofs_unicity
+                      (@finType_decidable N) (f_equal _ (eqP H1))(eqP H2)).
       + move/eqP in H3.
         have Hcontra := projT2_eq (eqP H1).
-        rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
+        rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N)
+                  (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
         contradiction.
     - move /eqP in H2.
       have Hcontra := projT1_eq (eqP H1).
       contradiction.
     - case (boolP ( @eq_op (Finite.eqType (T (projT1 it')))
-                           (eq_rect (projT1 it) _ (projT2 it) (projT1 it')
-                                    (@elimT (@eq (Finite.sort N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
-                                            (@eq_op (Finite.eqType N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
-                                            (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
-                                            H2))
-                           (projT2 it'))) => H3.
+           (eq_rect (projT1 it) _ (projT2 it) (projT1 it')
+               (@elimT (@eq (Finite.sort N) (projT1 it) (projT1 it'))
+                       (@eq_op (Finite.eqType N) (projT1 it) (projT1 it'))
+                       (@eqP (Finite.eqType N) (projT1 it) (projT1 it'))
+                       H2))
+           (projT2 it'))) => H3.
       + have Hcontra := eq_sigT it it' (eqP H2) (eqP H3).
         move /eqP in H1.
         contradiction.
@@ -147,7 +158,7 @@ End Games.
 
 
 
-  
+  Check profile.
 
 
 
@@ -163,17 +174,20 @@ Module NFGame.
       preceq : forall i, rel (outcome i) ; 
     }.
 
-  Definition NashEqb player (g : game player) : pred (profile (action g)) :=
+  Definition NashEqb player (g : game player)
+    : pred (profile (action g)) :=
     fun p =>
     [forall i : player,
       [forall ai : action g i,
         ~~ prec (@preceq _ _ _) (utility i p) (utility i (move p ai)) ]].
 
-  Definition NashEq player (g : game player) (p : profile (action g)) : Prop :=
+  Definition NashEq player (g : game player) (p : profile (action g))
+    : Prop :=
     forall (i : player) (ai : action g i),
     ~ prec (@preceq _ _ _) (utility i p) (utility i (move p ai)).
 
-  Lemma NashEqP player (g : game player) (p : profile (action g)) : reflect (NashEq p) (NashEqb p).
+  Lemma NashEqP player (g : game player) (p : profile (action g)) :
+    reflect (NashEq p) (NashEqb p).
   Proof.
   case (boolP (NashEqb p)) ; constructor ; move: i.
   - move /forallP => H i ; move: (H i).
