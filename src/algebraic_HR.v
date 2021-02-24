@@ -134,8 +134,10 @@ Section Games.
                   end.
 
 
-    Definition eq_profile N (X : N -> Type) (p1 p2 : profile X) :
+    Lemma eq_profile N (X : N -> Type) (p1 p2 : profile X) :
       p1 = p2 <-> forall i, p1 i = p2 i.
+    Proof.
+    
     (* Unprovable *)
     Admitted.      
     
