@@ -166,16 +166,13 @@ Section Games.
     rewrite ffunE.
     (* rewrite eq_profile => it' //=. *)
     case (boolP (@eq_op (Finite.eqType (@tag_finType N T)) it it')) => H1 ; case (boolP (projT1 it == projT1 it')) => H2.
-    - case (boolP (@eq_op (Finite.eqType (T (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it')))
-        (@eq_rect (Finite.sort N) (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it) (fun x : Finite.sort N => Finite.sort (T x))
-           (projT2  it) (projT1 it')
-           (@elimT
-              (@eq (Finite.sort N) (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it)
-                 (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it'))
-              (@eq_op (Finite.eqType N) (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it)
-                 (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it'))
-              eqP H2))
-        (@projT2 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it'))) => H3.
+    - case (boolP ( @eq_op (Finite.eqType (T (projT1 it')))
+                           (eq_rect (projT1 it) _ (projT2 it) (projT1 it')
+                                    (@elimT (@eq (Finite.sort N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
+                                            (@eq_op (Finite.eqType N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
+                                            (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
+                                            H2))
+                           (projT2 it'))) => H3.
       + rewrite (rew_map X (@projT1 _ _) (eqP H1) xi).
           by rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (f_equal _ (eqP H1))(eqP H2)) => //= x y.
       + move/eqP in H3.
@@ -185,18 +182,13 @@ Section Games.
     - move /eqP in H2.
       have Hcontra := projT1_eq (eqP H1).
       contradiction.
-    - case (boolP (@eq_op (Finite.eqType (T (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it')))
-        (@eq_rect (Finite.sort N) (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it) (fun x : Finite.sort N => Finite.sort (T x))
-           (@projT2 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it)
-           (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it')
-           (@elimT
-              (@eq (Finite.sort N) (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it)
-                 (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it'))
-              (@eq_op (Finite.eqType N) (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it)
-                 (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it'))
-              (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it)
-                 (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it')) H2))
-        (@projT2 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it'))) => H3.
+    - case (boolP ( @eq_op (Finite.eqType (T (projT1 it')))
+                           (eq_rect (projT1 it) _ (projT2 it) (projT1 it')
+                                    (@elimT (@eq (Finite.sort N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
+                                            (@eq_op (Finite.eqType N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
+                                            (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) _ it) (projT1 it'))
+                                            H2))
+                           (projT2 it'))) => H3.
       + have Hcontra := eq_sigT it it' (eqP H2) (eqP H3).
         move /eqP in H1.
         contradiction.
