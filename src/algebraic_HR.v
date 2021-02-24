@@ -6,10 +6,8 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 
-
-
 Section GeneralLemmae.
-  Lemma finType_decidable (T : finType) :
+  Lemma eqType_dec (T : eqType) :
     forall t1 t2 : T, t1 = t2 \/ t1 <> t2.
   Proof.
   move => t1 t2.
@@ -17,6 +15,7 @@ Section GeneralLemmae.
   - by apply or_introl.
   - by apply or_intror.
   Qed.
+
 End GeneralLemmae.
 
 
@@ -128,14 +127,14 @@ Section Games.
            (projT2 it'))) => H3.
       + rewrite (rew_map X (@projT1 _ _) (eqP H1) xi).
           by rewrite (Eqdep_dec.eq_proofs_unicity
-                (@finType_decidable N) (f_equal _ (eqP H1))(eqP H2)).
+                (@eqType_dec N) (f_equal _ (eqP H1))(eqP H2)).
       + move/eqP in H3.
         have Hcontra := projT2_eq (eqP H1).
-        rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N)
+        rewrite (Eqdep_dec.eq_proofs_unicity (@eqType_dec N)
                   (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
         contradiction.
     - move /eqP in H2.
-      have Hcontra := projT1_eq (eqP H1).
+      rewrite (eqP H1) in H2.
       contradiction.
     - case (boolP ( @eq_op (Finite.eqType (T (projT1 it')))
            (eq_rect (projT1 it) _ (projT2 it) (projT1 it')
@@ -157,8 +156,6 @@ End Games.
 
 
 
-
-  Check profile.
 
 
 
@@ -244,11 +241,11 @@ Module HGGame.
 
   Lemma NashEq_HG_NFb player (g : hggame player) p :
     NashEqb p = @NFGame.NashEqb _ (to_normal_form g) p.
-  Proof. by compute. Qed.
+  Proof. by []. Qed.
 
   Lemma nashEq_HG_NF player (g : hggame player) p :
     NashEq p <-> @NFGame.NashEq _ (to_normal_form g) p.
-  Proof. by compute. Qed.
+  Proof. by []. Qed.
 
 End HGGame.
 
@@ -389,15 +386,117 @@ End HR.
 
 Section Examples.
 
-  Definition coordination_game : NFGame.game [finType of 'I_2] :=
-    {| NFGame.outcome := fun _ => nat ;
-       NFGame.preceq := fun _ => leq ;
-       NFGame.action := fun _ => bool_finType ;
-       NFGame.utility :=
-         fun _ p => if p (inord 0) == p (inord 1) then 1 else 0
-    |}.
+  (* Examples from the paper *)
 
-  Eval compute in  NFGame.action coordination_game (inord 0).
+
+
+  Lemma move_bool_eq (N : finType) :
+    forall (b : bool_finType) (i : N),
+    @move N _ [ffun _ => b] i b = [ffun _ => b].
+  Proof.
+  move => b i.
+  rewrite /move.
+  rewrite (eq_dffun (fun _ => b)) => // j.
+  case (boolP (i == j)) => Hij ; last by rewrite ffunE.
+  exact : rew_const.
+  Qed.
+
+
+  Definition player3 := [finType of 'I_3].
+  Definition player4 := [finType of 'I_4].
+  
+  Section Example1.
+
+    (* Example 1.
+       4 agents like to have lunch together. 
+       They can have lunch in R1 or R2 (modeled with R1=true and R2=false).
+       They want to eat with the people they like the most *)
+
+
+    Definition example1 (aff : player4 -> player4 -> nat) : NFGame.game player4 :=
+      {| NFGame.outcome := fun _ => nat ;
+         NFGame.preceq := fun _ => leq ;
+         NFGame.action := fun _ => bool_finType ;
+         NFGame.utility :=
+           fun i p => \sum_(j | (i != j) && (p i == p j)) aff i j ;
+      |}.
+
+    Lemma NashEq_ex1 :
+      @NFGame.NashEq _ (example1 (fun _ _ => 1)) [ffun _ => true].
+    Proof.
+    move => i ai.
+    case (boolP ai) => Hai.
+    - rewrite move_bool_eq /prec.
+        by destruct (NFGame.preceq (NFGame.utility i _) (NFGame.utility i _)).
+    - by admit.
+    Admitted.
+    
+  End Example1.
+
+
+
+
+  Section Example2.
+
+    Definition example2 (aff : player4 -> player4 -> nat) (tps : player4 -> player4 -> nat) : NFGame.game player4 :=
+      {| NFGame.outcome := fun _ => prod nat nat ;
+         NFGame.preceq := fun _ => fun x y => leq x.1 y.1 && leq x.2 y.2 ;
+         NFGame.action := fun _ => bool_finType ;
+         NFGame.utility :=
+           fun i p => (\sum_(j | (i != j) && (p i == p j)) aff i j,
+                       \sum_(j | (i != j) && (p i == p j)) tps i j) ;
+      |}.
+
+    Lemma NashEq_ex2 :
+      forall (tps : player4 -> player4 -> nat),
+      @NFGame.NashEq _ (example2 (fun _ _ => 1) tps) [ffun _ => true].
+    Proof.
+    move => tps i ai.
+    case (boolP ai) => Hai.
+    - rewrite move_bool_eq /prec.
+        by destruct (NFGame.preceq (NFGame.utility i _) (NFGame.utility i _)).
+    - by admit.
+    Admitted.
+
+  End Example2.  
+
+
+
+  Section Example3.
+(*
+    Check seq_sub_finType [:: (1,2); (1,3); (1,4); (2,3); (2,4); (3,4)].
+
+    Definition example3 (aff : player4 -> player4 -> nat) (tps : player4 -> player4 -> nat) : HGGame.hggame player4 :=
+      {| HGGame.local_game := seq_sub_finType [:: (1,2); (1,3); (1,4); (2,3); (2,4); (3,4)] ;
+         HGGame.plays := fun lg => match lg with
+                                   | (1,2) => fun i => i == 1
+                                   | _ => fun i => false
+                                   end ;
+         HGGame.outcome := fun _ => prod nat nat ;
+         HGGame.outcome0 := fun _ => (0,0) ;
+         HGGame.oplus := fun _ x y => (x.1+y.1, x.2+y.2) ;
+         HGGame.preceq := fun _ => fun x y => leq x.1 y.1 && leq x.2 y.2 ;
+         HGGame.action := fun _ => bool_finType ;
+         HGGame.local_utility :=
+           fun lg i p => if HGGame.plays lg i then (aff lg.1 lg.2, tps lg.1 lg.2) else (0,0) ;
+      |}.
+
+
+
+  Record hggame (player : finType) : Type :=
+    { local_game : finType ;
+      plays : local_game -> pred player ;
+      outcome : player -> Type ;
+      outcome0 : forall i, outcome i ;
+      oplus : forall i, Monoid.com_law (outcome0 i) ;
+      preceq : forall i, rel (outcome i) ;
+      action : player -> finType ;
+      local_utility : local_game ->
+                      forall i, profile action -> outcome i ;
+*)
+
+
+
 
 End Examples.
 
