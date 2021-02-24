@@ -117,18 +117,18 @@ Section Games.
     rewrite /move /bmove /iprofile_flatten.
     apply eq_dffun => it' //=.
     rewrite ffunE.
-    case (boolP (@eq_op (Finite.eqType (tag_finType T)) it it')) => H1 ;
+    case (boolP (@eq_op (Finite.eqType (tag_finType T)) it it')) => H1;
                           case (boolP (projT1 it == projT1 it')) => H2.
     - case (boolP ( @eq_op (Finite.eqType (T (projT1 it')))
            (eq_rect (projT1 it) _ (projT2 it) (projT1 it')
-               (@elimT (@eq (Finite.sort N) (projT1 it) (projT1 it'))
-                       (@eq_op (Finite.eqType N) (projT1 it) (projT1 it'))
-                       (@eqP (Finite.eqType N) (projT1 it) (projT1 it'))
-                       H2))
+              (@elimT (@eq (Finite.sort N) (projT1 it) (projT1 it'))
+                 (@eq_op (Finite.eqType N) (projT1 it) (projT1 it'))
+                 (@eqP (Finite.eqType N) (projT1 it) (projT1 it'))
+                 H2))
            (projT2 it'))) => H3.
       + rewrite (rew_map X (@projT1 _ _) (eqP H1) xi).
           by rewrite (Eqdep_dec.eq_proofs_unicity
-                      (@finType_decidable N) (f_equal _ (eqP H1))(eqP H2)).
+                (@finType_decidable N) (f_equal _ (eqP H1))(eqP H2)).
       + move/eqP in H3.
         have Hcontra := projT2_eq (eqP H1).
         rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N)
@@ -139,10 +139,10 @@ Section Games.
       contradiction.
     - case (boolP ( @eq_op (Finite.eqType (T (projT1 it')))
            (eq_rect (projT1 it) _ (projT2 it) (projT1 it')
-               (@elimT (@eq (Finite.sort N) (projT1 it) (projT1 it'))
-                       (@eq_op (Finite.eqType N) (projT1 it) (projT1 it'))
-                       (@eqP (Finite.eqType N) (projT1 it) (projT1 it'))
-                       H2))
+              (@elimT (@eq (Finite.sort N) (projT1 it) (projT1 it'))
+                 (@eq_op (Finite.eqType N) (projT1 it) (projT1 it'))
+                 (@eqP (Finite.eqType N) (projT1 it) (projT1 it'))
+                 H2))
            (projT2 it'))) => H3.
       + have Hcontra := eq_sigT it it' (eqP H2) (eqP H3).
         move /eqP in H1.
@@ -179,7 +179,8 @@ Module NFGame.
     fun p =>
     [forall i : player,
       [forall ai : action g i,
-        ~~ prec (@preceq _ _ _) (utility i p) (utility i (move p ai)) ]].
+        ~~ prec (@preceq _ _ _) (utility i p) (utility i (move p ai))
+    ]].
 
   Definition NashEq player (g : game player) (p : profile (action g))
     : Prop :=
@@ -280,10 +281,11 @@ Module BGame.
        HGGame.action := fun it => action g _ ;
        HGGame.local_utility := fun theta it p =>
            otimes (belief (projT1 it) theta)
-                  (utility (projT1 it) (proj_flatprofile p theta) theta) ;
+              (utility (projT1 it) (proj_flatprofile p theta) theta) ;
     |}.
 
-  Definition to_normal_form player (g : bgame player) : NFGame.game _ :=
+  Definition to_normal_form player (g : bgame player)
+    : NFGame.game _ :=
     HGGame.to_normal_form (to_hggame g).
 
   Definition NashEqb player (g : bgame player)
@@ -355,7 +357,7 @@ Section HR.
   apply /NFGame.NashEqP /BGame.NashEqP => /=.
   - rewrite /NFGame.NashEq /BGame.NashEq => /= H i t ai.
     move : (H (existT _ i t) ai).
-      by rewrite {1}/iprofile_flatten !HowsonRosenthal move_bmove => //=.
+      by rewrite {1}/iprofile_flatten !HowsonRosenthal move_bmove.
   - rewrite /NFGame.NashEq /BGame.NashEq => /= H it ai.
     have H' := (H (projT1 it) (projT2 it) ai).
       by rewrite {1 2 3 4}(sigT_eta it) move_bmove -!HowsonRosenthal.
