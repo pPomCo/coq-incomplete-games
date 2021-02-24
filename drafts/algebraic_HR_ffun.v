@@ -156,22 +156,7 @@ Section Games.
                   | AltFalse _ => p j tj
                   end].
 
-    (*
-    Lemma move_bmoveE N T X (p : iprofile T X) (i : N) (ti : T i) (xi : X i) :
-      forall (it' : {i : N & T i}),
-      (@move _ _ (iprofile_flatten p) (existT _ i ti) xi) it' = (iprofile_flatten (bmove p ti xi)) it'.
-    Proof.
-    Admitted.
-     *)
-
  
-    (*
-    Definition eq_profile N (X : N -> eqType) (p1 p2 : profile X) :
-      p1 = p2 <-> forall i, p1 i = p2 i.
-    Proof.
-    (* Impossible à prouver pour des fonctions classiques. ffun, fsfun, etc ? *)
-    Admitted.
-     *)
     
     Lemma move_bmove N T X (p : iprofile T X) (it : {i : N & T i}) (xi : X (projT1 it)) :
       (@move _ _ (iprofile_flatten p) it xi) = (iprofile_flatten (bmove p (projT2 it) xi)).
@@ -193,7 +178,11 @@ Section Games.
         (@projT2 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it'))) => H3.
       + rewrite (rew_map X (@projT1 _ _) (eqP H1) xi).
           by rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (f_equal _ (eqP H1))(eqP H2)) => //= x y.
-      + by admit.
+      + move/eqP in H3.
+        have Hcontra := projT2_eq (eqP H1).
+        Check projT1_eq (eqP H1).
+        rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
+        contradiction.
     - move /eqP in H2.
       have Hcontra := projT1_eq (eqP H1).
       contradiction.
@@ -215,7 +204,7 @@ Section Games.
         contradiction.
       + by rewrite ffunE.
     - by rewrite ffunE.
-    Admitted.
+    Qed.
   End Profiles.
 
 End Games.
@@ -405,36 +394,6 @@ Section Examples.
 
   Eval compute in  NFGame.action coordination_game (inord 0).
 
-
-  (*
-  
-  Lemma prec_leq i j : prec leq i j = ltn i j.
-  Proof.
-  rewrite /prec => //=.
-  case (boolP (i < j)) => Hltn.
-  Search _ "ltn" "le".
-  - rewrite ltn_neqAle in Hltn.
-    move/andP in Hltn. destruct Hltn.
-      by rewrite -ltnNge (ltn_neqAle i j) H H0.
-  - by admit.
-  Admitted.
-  
-  Lemma coord_NashEq1 :
-    @NFGame.NashEq _ coordination_game xpredT.
-  Proof.
-  rewrite /NFGame.NashEq => i ai /=.
-  rewrite prec_leq.
-    by case (move xpredT ai (@inord 1 0) == move xpredT ai (@inord 1 1)).
-  Qed.
-  
-  Lemma coord_NashEq2 :
-    @NFGame.NashEq _ coordination_game xpred0.
-  Proof.
-  rewrite /NFGame.NashEq => i ai /=.
-  rewrite prec_leq.
-    by case (move xpred0 ai (@inord 1 0) == move xpred0 ai (@inord 1 1)).
-  Qed.
-  *)
 End Examples.
 
 
