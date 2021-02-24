@@ -96,7 +96,7 @@ Section Games.
     Qed.
 
     
-    Definition bmove N T X (p : iprofile T X) (i : N) (ti : T i) (xi : X i)
+    Definition bmove N T X (p : iprofile T X) (i : N) ti xi
       : iprofile T X :=
       [ffun j => fun tj => match boolP (i == j) with
                            | AltTrue h =>
@@ -214,37 +214,40 @@ Module HGGame.
       oplus : forall i, Monoid.com_law (outcome0 i) ;
       preceq : forall i, rel (outcome i) ;
       action : player -> finType ;
-      local_utility : local_game -> forall i, profile action -> outcome i ; }.
+      local_utility : local_game ->
+                      forall i, profile action -> outcome i ;
+    }.
 
-  Definition global_utility player (g : hggame player) (i : player) (p : profile (action g)) :=
-    \big[oplus g i/outcome0 g i]_(lg : local_game g | plays lg i) local_utility lg i p.
+  Definition global_utility player (g : hggame player) (i : player)
+             (p : profile (action g)) :=
+    \big[oplus g i/outcome0 g i]_(lg : local_game g | plays lg i)
+     local_utility lg i p.
 
-  Definition to_normal_form player (g : hggame player) : NFGame.game player :=
+  Definition to_normal_form player (g : hggame player)
+    : NFGame.game player :=
     {| NFGame.outcome := outcome g ;
        NFGame.preceq := @preceq _ g ;
        NFGame.action := action g ;
-       NFGame.utility := @global_utility _ g ; |}.
+       NFGame.utility := @global_utility _ g ;
+    |}.
 
-  Definition NashEqb player (g : hggame player) := @NFGame.NashEqb _ (to_normal_form g).
-  Definition NashEq player (g : hggame player) := @NFGame.NashEq _ (to_normal_form g).
+  Definition NashEqb player (g : hggame player) :=
+    @NFGame.NashEqb _ (to_normal_form g).
 
-  Lemma NashEqP player (g : hggame player) (p : profile (action g)) : reflect (NashEq p) (NashEqb p).
-  Proof.
-  exact: NFGame.NashEqP.
-  Qed.
+  Definition NashEq player (g : hggame player) :=
+    @NFGame.NashEq _ (to_normal_form g).
+
+  Lemma NashEqP player (g : hggame player) (p : profile (action g))
+    : reflect (NashEq p) (NashEqb p).
+  Proof. exact: NFGame.NashEqP. Qed.
 
   Lemma NashEq_HG_NFb player (g : hggame player) p :
     NashEqb p = @NFGame.NashEqb _ (to_normal_form g) p.
-  Proof.
-      by compute.
-  Qed.
+  Proof. by compute. Qed.
 
   Lemma nashEq_HG_NF player (g : hggame player) p :
     NashEq p <-> @NFGame.NashEq _ (to_normal_form g) p.
-  Proof.
-      by compute.
-  Qed.
-
+  Proof. by compute. Qed.
 
 End HGGame.
 
@@ -257,11 +260,14 @@ Module BGame.
     { evalst : player -> eval_struct ;
       signal : player -> finType ;
       action : player -> finType ;
-      utility : forall i : player, profile action -> profile signal -> U (evalst i) ;
-      belief : forall i : player, profile signal -> W (evalst i) ; }.
+      utility : forall i : player,
+        profile action -> profile signal -> U (evalst i) ;
+      belief : forall i : player, profile signal -> W (evalst i) ;
+    }.
 
-  Definition GEutility player (g : bgame player) (i : player) (t : signal g i) (p : iprofile (signal g) (action g)) :=
-    \big[oplus (evalst g i)/V0 (evalst g i)]_(theta : fprofile (signal g) | (theta i) == t)
+  Definition GEutility player (g : bgame player) (i : player) t p :=
+    \big[oplus (evalst g i)/V0 (evalst g i)]_(
+     theta : fprofile (signal g) | (theta i) == t)
      otimes (belief i theta) (utility i (proj_iprofile p theta) theta).
 
   Definition to_hggame player (g : bgame player) : HGGame.hggame _ :=
@@ -272,26 +278,32 @@ Module BGame.
        HGGame.oplus := fun it => oplus _ ;
        HGGame.preceq := fun it => @preceq_V _ ;
        HGGame.action := fun it => action g _ ;
-       HGGame.local_utility := fun theta it p => otimes (belief (projT1 it) theta) (utility (projT1 it) (proj_flatprofile p theta) theta) ; |}.
+       HGGame.local_utility := fun theta it p =>
+           otimes (belief (projT1 it) theta)
+                  (utility (projT1 it) (proj_flatprofile p theta) theta) ;
+    |}.
 
   Definition to_normal_form player (g : bgame player) : NFGame.game _ :=
     HGGame.to_normal_form (to_hggame g).
 
-  Definition NashEqb player (g : bgame player) : pred (iprofile (signal g) (action g)) :=
+  Definition NashEqb player (g : bgame player)
+    : pred (iprofile (signal g) (action g)) :=
     fun bp =>
     [forall i : player,
       [forall t : signal g i,
         [forall ai : action g i,
-          ~~ prec (@preceq_V _) (GEutility t bp) (GEutility t (bmove bp t ai)) ]]].
+          ~~ prec (@preceq_V _) (GEutility t bp)
+             (GEutility t (bmove bp t ai)) ]]].
 
-  Definition NashEq player (g : bgame player) (p : iprofile (signal g) (action g)) : Prop :=
+  Definition NashEq player (g : bgame player) p : Prop :=
     forall i : player,
     forall t : signal g i,
     forall ai : action g i,
     ~ prec (@preceq_V _) (GEutility t p) (GEutility t (bmove p t ai)).
 
 
-  Lemma NashEqP player (g : bgame player) (p : iprofile (signal g) (action g)) :
+  Lemma NashEqP player (g : bgame player)
+        (p : iprofile (signal g) (action g)) :
     reflect (NashEq p) (NashEqb p).
   Proof.
   case (boolP (NashEqb p)) ; constructor ; move: i.
@@ -320,9 +332,12 @@ Section HR.
 
   Lemma HowsonRosenthal :
     forall player (g : BGame.bgame player) i t p,
-    @BGame.GEutility player g i t p = @HGGame.global_utility _ (BGame.to_hggame g) (existT _ i t) (iprofile_flatten p).
+    @BGame.GEutility player g i t p
+    = @HGGame.global_utility _ (BGame.to_hggame g) (existT _ i t)
+                             (iprofile_flatten p).
   Proof.
-  rewrite /BGame.GEutility /HGGame.global_utility /BGame.to_hggame => player g i t p //=.
+  rewrite /BGame.GEutility /HGGame.global_utility
+          /BGame.to_hggame => player g i t p //=.
   apply eq_bigr => theta Htheta.
     by rewrite -proj_iprof_flatprof.
   Qed.
@@ -333,7 +348,8 @@ Section HR.
   Lemma HowsonRosenthal_NashEqb :
     forall player (g : BGame.bgame player),
     forall  (p : iprofile (BGame.signal g) (BGame.action g)),
-    @HGGame.NashEqb _ (BGame.to_hggame g) (iprofile_flatten p) = BGame.NashEqb p.
+    @HGGame.NashEqb _ (BGame.to_hggame g) (iprofile_flatten p)
+    = BGame.NashEqb p.
   Proof.
   move => player g p.
   apply /NFGame.NashEqP /BGame.NashEqP => /=.
@@ -348,7 +364,8 @@ Section HR.
   Lemma HowsonRosenthal_NashEq :
     forall player (g : BGame.bgame player),
     forall  (p : iprofile (BGame.signal g) (BGame.action g)),
-    @HGGame.NashEq _ (BGame.to_hggame g) (iprofile_flatten p) <-> BGame.NashEq p.
+    @HGGame.NashEq _ (BGame.to_hggame g) (iprofile_flatten p)
+    <-> BGame.NashEq p.
   Proof.
   split => H.
   - apply/BGame.NashEqP ; move/HGGame.NashEqP in H.
@@ -374,7 +391,8 @@ Section Examples.
     {| NFGame.outcome := fun _ => nat ;
        NFGame.preceq := fun _ => leq ;
        NFGame.action := fun _ => bool_finType ;
-       NFGame.utility := fun _ p => if p (inord 0) == p (inord 1) then 1 else 0
+       NFGame.utility :=
+         fun _ p => if p (inord 0) == p (inord 1) then 1 else 0
     |}.
 
   Eval compute in  NFGame.action coordination_game (inord 0).
