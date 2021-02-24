@@ -7,6 +7,22 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 
+
+
+Section GeneralLemmae.
+  Lemma finType_decidable (T : finType) :
+    forall t1 t2 : T, t1 = t2 \/ t1 <> t2.
+  Proof.
+  move => t1 t2.
+  case (boolP (t1 == t2)) => /eqP H.
+  - by apply or_introl.
+  - by apply or_intror.
+  Qed.
+End GeneralLemmae.
+
+
+
+
 Section EvalStruct.
 
   (* Structure d'évaluation. Contient les opérateurs, les domaines et leurs ordres *)
@@ -117,17 +133,13 @@ Section Games.
                   | AltFalse _ => p j tj
                   end.
 
-    (*
-    Lemma move_bmoveE N T X (p : iprofile T X) (i : N) (ti : T i) (xi : X i) :
-      forall (it' : {i : N & T i}),
-      (@move _ _ (iprofile_flatten p) (existT _ i ti) xi) it' = (iprofile_flatten (bmove p ti xi)) it'.
-    Proof.
-    Admitted.
-     *)
 
     Definition eq_profile N (X : N -> Type) (p1 p2 : profile X) :
       p1 = p2 <-> forall i, p1 i = p2 i.
+    (* Unprovable *)
     Admitted.      
+    
+
     
     Lemma move_bmove N T X (p : iprofile T X) (it : {i : N & T i}) (xi : X (projT1 it)) :
       (@move _ _ (iprofile_flatten p) it xi) = (iprofile_flatten (bmove p (projT2 it) xi)).
@@ -135,7 +147,7 @@ Section Games.
     rewrite /move /bmove /iprofile_flatten.
     rewrite eq_profile => it' //=.
 
-    case (boolP (@eq_op (Finite.eqType _) it it')) => //= H ; case (boolP (@eq_op _ (projT1 it) (projT1 it'))) => H2.
+    case (boolP (@eq_op (Finite.eqType _) it it')) => //= H1 ; case (boolP (@eq_op _ (projT1 it) (projT1 it'))) => H2.
     - case (boolP ( @eq_op (Finite.eqType (T (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')))
                            (@eq_rect (Finite.sort N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it) (fun x : Finite.sort N => Finite.sort (T x))
                                      (@projT2 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
@@ -148,14 +160,14 @@ Section Games.
                                       (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
                                             (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')) H2))
                            (@projT2 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it'))) => H3.
-      + (* Search _ (eq_rect _ _ _ _ _ = eq_rect _ _ _ _ _). *)
-        rewrite (rew_map X (@projT1 _ _) (eqP H) xi).
-        have th : f_equal (@projT1 _ _) (eqP H) = eqP H2. by admit.
-          by rewrite th.
-      + by admit.
-    - have := H2.
-      have H' := H ; move/eqP in H'.
-      move/eqP ; rewrite {1}H'.
+      + rewrite (rew_map X (@projT1 _ _) (eqP H1) xi).
+          by rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (f_equal _ (eqP H1)) (eqP H2)).
+      + move /eqP in H3.
+        have Hcontra := projT2_eq (eqP H1).
+        rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
+        contradiction.
+    - move /eqP in H2.
+      have Hcontra := projT1_eq (eqP H1).
       contradiction.
     - case (boolP ( @eq_op (Finite.eqType (T (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')))
                       (@eq_rect (Finite.sort N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it) (fun x : Finite.sort N => Finite.sort (T x))
@@ -169,93 +181,15 @@ Section Games.
                                  (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it)
                                        (@projT1 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it')) H2))
                       (@projT2 (Finite.sort N) (fun i0 : Finite.sort N => Finite.sort (T i0)) it'))) => H3.
-      + by admit.
-      + by admit.
+      + have Hcontra := eq_sigT it it' (eqP H2) (eqP H3).
+        move /eqP in H1.
+        contradiction.
+      + by [].
     - by [].
-    Admitted.
+    Qed.
 
     
   End Profiles.
-
-
-  (*
-  Section Profiles.
-    (* Profils (de stratégies, de signaux, etc.) *)
-
-    (* Domaines *)
-    Variables (N : finType)
-              (T : N -> finType)
-              (X : N -> Type).
-
-
-    (* Profil classique : une action par joueur *)
-    Definition profile := {ffun forall i, X i}.
-    Definition profile' := forall i, X i.
-
-    (* Définir les profils comme des fonctions et à l'occasion les caster en finType *)
-
-    Definition profile'_profile (p : profile') : profile.
-    exact : [ffun i => p i].
-    Qed.
-
-    (* Profil à co-domaine fini *)
-    Definition fprofile := {dffun forall i, T i}.
-    Definition fprofile' := forall i, T i.
-
-    Definition fprofile'_fprofile (p : fprofile') : fprofile.
-    exact : [ffun i => p i].
-    Qed.
-
-    Definition profile_finType
-    
-
-    (* Profil "bayésien" : une action par joueur et par signal *)
-    Definition bprofile := {ffun forall it : {i : N & T i}, X (projT1 it)}.
-
-    (* Projection d'un profil "étant donné les signaux" *)
-    Definition proj_profile (bp : bprofile) (theta : fprofile) : profile :=
-      [ffun i => bp (existT _ i (theta i))].
-
-    Definition move (p : profile) (i : N) (xi : X i) : profile :=
-      [ffun j => match boolP (i == j) with
-                 | AltTrue h => eq_rect _ _ xi _ (eqP h)
-                 | AltFalse _ => p j
-                 end].
-
-    Definition bmove (bp : bprofile) (i : N) (t : T i) (xi : X i) : bprofile :=
-      [ffun jt => match boolP (i == (projT1 jt)) with
-                  | AltTrue h => eq_rect _ _ xi _ (eqP h)
-                  | AltFalse _ => bp jt
-                  end].
-
-    (* ecast == eq_rect 
-    Search _ "cast".
-    Check fun m n (e : m = n) (x : 'I_m) => ecast i ('I_ i) e x. 
-     *)
-    
-  End Profiles.
-  Check @bprofile .
-  (*
-  Definition bprofile2 :=
-    fun (N : finType) (T : N -> finType) X (p : @bprofile N T X) => _ : @profile {i : N & T i}X.
-   *)
-  
-  Lemma move_bmove (N : finType) (T : N -> finType) (X : N -> Type) :
-    forall (p : profile (fun it : tag_finType _ => _)) (i : N) (t : T i) (xi : X i),
-    @move (tag_finType T) _ p (existT _ i t) xi = @bmove N T X p _ t xi.
-  Proof.
-  move => p i t xi.
-  apply eq_dffun => //= it.
-  destruct boolP.
-  destruct boolP.
-  simpl.
-  Check f_equal_dep.
-  Search _ eq_rect.
-  f_equal.
-  case (boolP (existT (fun i0 : N => T i0) i t == it)).
-  Admitted.
-  )
-*)  
 End Games.
 
 
@@ -443,44 +377,7 @@ Section Examples.
 
   Eval compute in  NFGame.action coordination_game (inord 0).
 
-  Lemma prec_leq i j : prec leq i j = ltn i j.
-  Proof.
-  rewrite /prec => //=.
-  case (boolP (i < j)) => Hltn.
-  (* Search _ "ltn" "le". *)
-  - rewrite ltn_neqAle in Hltn.
-    move/andP in Hltn. destruct Hltn.
-      by rewrite -ltnNge (ltn_neqAle i j) H H0.
-  - by admit.
-  Admitted.
-  
-
-  Lemma coord_NashEq1 :
-    @NFGame.NashEq _ coordination_game xpredT.
-  Proof.
-  rewrite /NFGame.NashEq => i ai /=.
-  rewrite prec_leq.
-    by case (move xpredT ai (@inord 1 0) == move xpredT ai (@inord 1 1)).
-  Qed.
-  
-  Lemma coord_NashEq2 :
-    @NFGame.NashEq _ coordination_game xpred0.
-  Proof.
-  rewrite /NFGame.NashEq => i ai /=.
-  rewrite prec_leq.
-    by case (move xpred0 ai (@inord 1 0) == move xpred0 ai (@inord 1 1)).
-  Qed.
-
 End Examples.
-
-
-
-
-
-
-
-
-
 
 
 

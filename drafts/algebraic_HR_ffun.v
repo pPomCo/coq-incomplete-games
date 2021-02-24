@@ -67,9 +67,9 @@ Section Games.
       [ffun i => p i].
      *)
 
-    Definition profile (N : finType) (X : N -> eqType) := {dffun forall i, X i}.
+    Definition profile N (X : N -> eqType) := {dffun forall i, X i}.
     
-    Definition fprofile (N : finType) (X : N -> finType) := {dffun forall i, X i}.
+    Definition fprofile N (X : N -> finType) := {dffun forall i, X i}.
     
     (*
     Definition move' N X (p : profile X) (i : N) (pi : X i) : profile X.
@@ -180,7 +180,6 @@ Section Games.
           by rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (f_equal _ (eqP H1))(eqP H2)) => //= x y.
       + move/eqP in H3.
         have Hcontra := projT2_eq (eqP H1).
-        Check projT1_eq (eqP H1).
         rewrite (Eqdep_dec.eq_proofs_unicity (@finType_decidable N) (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
         contradiction.
     - move /eqP in H2.
@@ -198,8 +197,7 @@ Section Games.
               (@eqP (Finite.eqType N) (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it)
                  (@projT1 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it')) H2))
         (@projT2 (Finite.sort N) (fun i : Finite.sort N => Finite.sort (T i)) it'))) => H3.
-      + Search _ "eq" "sigT".
-        have Hcontra := eq_sigT it it' (eqP H2) (eqP H3).
+      + have Hcontra := eq_sigT it it' (eqP H2) (eqP H3).
         move /eqP in H1.
         contradiction.
       + by rewrite ffunE.
