@@ -2,6 +2,7 @@ From Coq Require Import ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 Require Import algebraic_HR.
+Set Implicit Arguments.
 
 
 
@@ -11,6 +12,10 @@ Section GeneralLemmae.
   Lemma neqb_eqf (a b : bool) :
     (a != b) = (a == ~~b).
   Proof. by case a ; case b. Qed.
+  
+  Lemma neqb_eqf' (T : eqType) (t1 t2 : T) :
+    (t1 != t2) -> (t1 == t2) = false.
+  Proof. by case (t1 == t2). Qed.
 
 
   Lemma card_ltn n :
@@ -37,7 +42,17 @@ Section GeneralLemmae.
     by rewrite iterS IHm.
   Qed.
 
-  
+  Lemma if_eqpred (T : eqType) a a' (t1 t2 : T) :
+    t1 != t2 ->
+    ((if a then t1 else t2) == (if a' then t1 else t2)) = (a == a').
+  Proof.
+  move => H.
+  case (boolP a) ; case (boolP a').
+  - by rewrite eqxx.
+  - by rewrite (neqb_eqf' _ _ _ H).
+  - by rewrite (eq_sym t2) (neqb_eqf' _ _ _ H).
+  - by rewrite eqxx.
+  Qed.
 
 End GeneralLemmae.
 
@@ -161,89 +176,59 @@ Section Examples.
       in
       let tps := fun i j => if (i < 2) == (j < 2) then 10 else 1
       in
-      @NFGame.NashEq _ (example2 aff tps) [ffun i : player4 => if i < player4_num 2 then b else ~~b].
+      @NFGame.NashEq _ (example2 aff tps) [ffun i : player4 => if i < 2 then b else ~~b].
     Proof.
-    - have th (j : player4) : (if j < player4_num 2 then b else ~~b) = [ffun k : player4 => if k < player4_num 2 then b else ~~b] j.
-        by rewrite !inordK => // ; rewrite ffunE.
-    - have th2 (j : player4) : (if j < player4_num 2 then ~~b else b) = [ffun k : player4 => if k < player4_num 2 then ~~b else b] j.
-        by rewrite !inordK => // ; rewrite ffunE.
-
-    - have th_pnum (j : player4) : j < player4_num 2 -> j < 2. by rewrite inordK.
-    - have th_pnum' (j : player4) : ~~ (j < player4_num 2) -> (j < 2) = false.
-        by move => H ; apply negbTE ; rewrite inordK in H.
-    - have th_pnum'' (i j : player4) : (i < player4_num 2) = (j < player4_num 2) -> (i < 2) = (j < 2).
-      case (boolP (i < player4_num 2)) => Hi ; case (boolP (j < player4_num 2)) => Hj.
-      + by rewrite !th_pnum.
-      + by rewrite (th_pnum _ Hi) th_pnum'.
-      + by rewrite (th_pnum' _ Hi) th_pnum.
-      + by rewrite (th_pnum' _ Hi) (th_pnum' _ Hj).
-    - have th_pnum''' (i j : player4) : (i < player4_num 2) != (j < player4_num 2) -> (i < 2) == (j < 2) = false.
-      case (boolP (i < player4_num 2)) => Hi ; case (boolP (j < player4_num 2)) => Hj.
-      + by rewrite !th_pnum.
-      + by rewrite (th_pnum _ Hi) th_pnum'.
-      + by rewrite (th_pnum' _ Hi) th_pnum.
-      + by rewrite (th_pnum' _ Hi) (th_pnum' _ Hj).
-
-    - have th_ffun (i j : player4) : (j != i) && ([ffun i1 : player4 => if i1 < player4_num 2 then b else ~~ b] i == [ffun i1 : player4 => if i1 < player4_num 2 then b else ~~ b] j) = (j != i) && ((i < player4_num 2) == (j < player4_num 2)).
-      rewrite !ffunE.
-      case (i < player4_num 2) ; case (j < player4_num 2).
-      + by rewrite eqxx.
-      + by rewrite -neqb_eqf eqxx.
-      + by rewrite (eq_sym _ b) -neqb_eqf eqxx.
-      + by rewrite eqxx.
-
-      
+    - have th (j : player4) : (if j < 2 then b else ~~b) = [ffun k : player4 => if k < 2 then b else ~~b] j.
+        by rewrite ffunE.
+    - have th2 (j : player4) : (if j < 2 then ~~b else b) = [ffun k : player4 => if k <  2 then ~~b else b] j.
+        by rewrite ffunE.
 
         
     - move => aff tps i ai => /=.
-      case (boolP (ai == if i < player4_num 2 then b else ~~b)) => Hai.
+      case (boolP (ai == if i < 2 then b else ~~b)) => Hai.
       + rewrite (eqP Hai).
           by rewrite th -move_prof_eq /prec andbN.
 
-      + have th_move (j : player4) : (j != i) && (move (N:=player4) (X:=fun=> bool_finType) [ffun i1 : player4 => if i1 < player4_num 2 then b else ~~ b] (i:=i) ai i == move (N:=player4) (X:=fun=> bool_finType) [ffun i1 : player4 => if i1 < player4_num 2 then b else ~~ b] (i:=i) ai j)
-                                     = (j != i) && ((i < player4_num 2) != (j < player4_num 2)).
+      + have th_move (j : player4) : (j != i) && (move (N:=player4) (X:=fun=> bool_finType) [ffun i1 : player4 => if i1 < 2 then b else ~~ b] (i:=i) ai i == move (N:=player4) (X:=fun=> bool_finType) [ffun i1 : player4 => if i1 < 2 then b else ~~ b] (i:=i) ai j)
+                                     = (j != i) && ((i < 2) != (j < 2)).
         case (boolP (j == i)) => /eqP H ; first by rewrite andFb.
         rewrite move_prof_ii move_prof_ij.
         rewrite neqb_eqf fun_if Bool.negb_involutive in Hai.
         rewrite !ffunE (eqP Hai).
-        case (boolP (i < player4_num 2)) => Hi ; case (boolP (j < player4_num 2)) => Hj.
+        case (boolP (i <  2)) => Hi ; case (boolP (j < 2)) => Hj ; rewrite !eqxx => //.
         * by rewrite (eq_sym _ b) -neqb_eqf eqxx.
-        * by rewrite eqxx.
-        * by rewrite eqxx.
         * by rewrite -neqb_eqf eqxx.
         * by rewrite eq_sym ; apply /eqP.
 
-      + rewrite (eq_bigl (fun j => (j != i) && ((i < player4_num 2) == (j < player4_num 2)))) => [|j] ;
-          last by rewrite th_ffun.
+          Search _ "andb".
+      + rewrite (eq_bigl (fun j => (j != i) && ((i < 2) == (j < 2)))) => [|j] ; 
+          last rewrite !ffunE if_eqpred => //= ;
+          last by case b.
         rewrite big_addi.
-        rewrite (eq_bigl (fun j => (j != i) && ((i < player4_num 2) == (j < player4_num 2)))) => [|j] ;
-          last by rewrite th_ffun.
+        rewrite (eq_bigl (fun j => (j != i) && ((i < 2) == (j < 2)))) => [|j] ;
+          last rewrite !ffunE if_eqpred => //= ;
+          last by case b.
         rewrite (eq_bigr (fun _ => 10)) => [|j /andP H] ; 
            last destruct H ;
-           last by rewrite /tps (th_pnum'' _ _ (eqP H0)) eqxx.
+           last by rewrite /tps H0. 
         rewrite big_addi.
-        rewrite (eq_bigl (fun j => (j != i) && ((i < player4_num 2) != (j < player4_num 2)))) => [|j] ;
+        rewrite (eq_bigl (fun j => (j != i) && ((i < 2) != (j < 2)))) => [|j] ;
           last by rewrite th_move.
         rewrite big_addi.
-        rewrite (eq_bigl (fun j => (j != i) && ((i < player4_num 2) != (j < player4_num 2)))) => [|j] ;
+        rewrite (eq_bigl (fun j => (j != i) && ((i < 2) != (j < 2)))) => [|j] ;
           last by rewrite th_move.
         rewrite (eq_bigr (fun _ => 1)) => [|j /andP H] ;
           last destruct H ;
-          last by rewrite /tps (th_pnum''' _ _ H0).
+          last move : (negP H0) => /eqP ;
+          last by rewrite /tps neqb_eqf => /eqP ->.
         rewrite big_addi.
 
-        rewrite /prec => /=.
-        Check max_card (fun j : player4 => (j != i) && ((i < player4_num 2) == (j < player4_num 2))).
-        Search _ "leq" "trans".
-        rewrite !muln1.
+        rewrite /prec !muln1 => /=.
         have th_card1 :
-          #|[pred j : 'I_4 | (j != i) && ((i < player4_num 2) == (j < player4_num 2))]| = 1.
-        Search _ (card _) "ltn".
-        Search _ card pred.
-        Check cardD1x _.
+          #|[pred j : 'I_4 | (j != i) && ((i < 2) == (j < 2))]| = 1.
           by admit.
         have th_card2 :
-          #|[pred j : 'I_4 | (j != i) && ((i < player4_num 2) != (j < player4_num 2))]| = 2.
+          #|[pred j : 'I_4 | (j != i) && ((i < 2) != (j < 2))]| = 2.
           by admit.
         by rewrite th_card1 th_card2.
     Admitted.
