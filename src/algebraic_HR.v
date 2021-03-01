@@ -17,6 +17,13 @@ Section GeneralLemmae.
   - by apply or_intror.
   Qed.
 
+  Lemma eqType_dec' (T : eqType) :
+    forall t1 t2 : T, decidable (t1 = t2).
+  Proof.
+  move => t1 t2.
+    by apply /decP /eqP.
+  Qed.
+
 End GeneralLemmae.
 
 
@@ -137,6 +144,67 @@ Section Games.
         by contradiction.
     Qed.
 
+    Section OtherLemmae.
+
+      (* Those lemmae are not necessary for the 
+         Howson-Rosenthal-like transformation *)
+      
+      Lemma move_prof_eq (N : finType) (T : N -> eqType):
+        forall (p : profile T) (i : N),
+        p = @move N _ p i (p i).
+      Proof.
+      move => t i.
+      apply ffunP => j.
+      rewrite ffunE.
+      case (boolP (i ==j)) => H  => //.
+        by rewrite f_equal_dep.
+      Qed.
+
+      Lemma move_prof_ij (N : finType) (T : N -> eqType) :
+        forall (p : profile T) (i j : N) (t : T i),
+        i != j -> @move N _ p i t j = p j.
+      Proof.
+      move => p i j t Hij.
+      rewrite ffunE.
+      case (boolP (i == j)) => H //.
+      move /eqP in Hij.
+      rewrite (eqP H) in Hij.
+        by contradiction.
+      Qed.
+
+      Lemma move_prof_ii (N : finType) (T : N -> eqType) :
+        forall (p : profile T) (i : N) (t : T i),
+        @move N _ p i t i = t.
+      Proof.
+      move => p i t.
+      rewrite ffunE.
+      case (boolP (i == i)) => H // ; last by move /eqP in H.
+      rewrite /decidable.
+        by rewrite -(Eqdep_dec.eq_rect_eq_dec (@eqType_dec' N)).
+      Qed.
+
+      Lemma move_constprof_eq (N T : finType) :
+        forall (t : T) (i : N),
+        @move N _ [ffun _ => t] i t = [ffun _ => t].
+      Proof.
+      move => t i.
+      have th : t = [ffun=>t] i. by rewrite ffunE.
+        by rewrite {2}th -move_prof_eq.
+      Qed.
+
+
+      Lemma move_constprofE (N T : finType) :
+        forall (t t' : T) (i j: N),
+        (@move N _ [ffun => t] i t') j = if i == j then t' else t.
+      Proof.
+      move => t t' i j.
+      rewrite ffunE.
+      case (boolP (i == j)) => H.
+      - exact : rew_const.
+      - by rewrite ffunE.
+      Qed.
+
+    End OtherLemmae.
 
   End Profiles.
 
