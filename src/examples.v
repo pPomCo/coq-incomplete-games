@@ -8,16 +8,107 @@ Require Import algebraic_HR.
 Section GeneralLemmae.
 
 
-  Lemma iter_add0:
-    forall n, iter n (addn 0) 0 = 0.
-  Proof. by elim. Qed.
-
   Lemma neqb_eqf (a b : bool) :
     (a != b) = (a == ~~b).
   Proof. by case a ; case b. Qed.
 
+
+  Lemma card_ltn n :
+    forall i : 'I_n,
+    #|[pred j : 'I_n | j < i]| = i.
+  Proof.
+  induction i => //=.
+  induction m.
+  apply card0.
+  Check (cardD1x _).
+  Search _ (_ < _.+1).
+  have th : is_true ((fun j => j < m.+1) m).
+  exact : ltnSn.
+  Admitted.
+  
+
 End GeneralLemmae.
 
+
+Section GameLemmae.
+  
+  Lemma move_prof_eq (N : finType) (T : N -> eqType):
+    forall (p : profile T) (i : N),
+    p = @move N _ p i (p i).
+  Proof.
+  move => t i.
+  apply ffunP => j.
+  rewrite ffunE.
+  case (boolP (i ==j)) => H  => //.
+    by rewrite f_equal_dep.
+  Qed.
+
+  Lemma move_prof_ij (N : finType) (T : N -> eqType) :
+    forall (p : profile T) (i j : N) (t : T i),
+    i != j -> @move N _ p i t j = p j.
+  Proof.
+  move => p i j t Hij.
+  rewrite ffunE.
+  case (boolP (i == j)) => H //.
+  move /eqP in Hij.
+  rewrite (eqP H) in Hij.
+    by contradiction.
+  Qed.
+
+  Lemma move_profconst_ii (N : finType) (T : eqType) :
+    forall (p : profile (fun=>T)) (i : N) (t : T),
+    @move N _ p i t i = t.
+  Proof.
+  move => p i t.
+  rewrite ffunE.
+  case (boolP (i == i)) => H // ; last by move /eqP in H.
+    by rewrite rew_const.
+  Qed.
+
+  Lemma move_constprof_eq (N T : finType) :
+    forall (t : T) (i : N),
+    @move N _ [ffun _ => t] i t = [ffun _ => t].
+  Proof.
+  move => t i.
+  have th : t = [ffun=>t] i. by rewrite ffunE.
+    by rewrite {2}th -move_prof_eq.
+  Qed.
+
+
+  Lemma move_constprofE (N T : finType) :
+    forall (t t' : T) (i j: N),
+    (@move N _ [ffun => t] i t') j = if i == j then t' else t.
+  Proof.
+  move => t t' i j.
+  rewrite ffunE.
+  case (boolP (i == j)) => H.
+  - exact : rew_const.
+  - by rewrite ffunE.
+  Qed.
+
+(*
+  Lemma big_add1 n (Hn : n > 0):
+    forall (P : pred 'I_n),
+    \sum_(j | P j) 1 = #|P|.
+  Proof.
+  move => P.
+  rewrite big_const.
+  elim : #|P| => // m IHm.
+    by rewrite iterS IHm.
+  Qed.
+*)
+
+  Lemma big_addi {T : finType} :
+    forall (P : pred T) (i : nat),
+    \sum_(j | P j) i = #|P| * i.
+  Proof.
+  move => i P.
+  rewrite big_const.
+  elim : #|i| => // m IHm.
+    by rewrite iterS IHm.
+  Qed.
+    
+End GameLemmae.
 
 
 
@@ -25,20 +116,30 @@ End GeneralLemmae.
 Section Examples.
 
   (* Examples from the paper *)
-
-  Lemma move_bool_eq (N : finType) :
-    forall (b : bool_finType) (i : N),
-    @move N _ [ffun _ => b] i b = [ffun _ => b].
-  Proof.
-  move => b i.
-  rewrite /move (eq_dffun (fun _ => b)) => // j.
-  case (boolP (i == j)) => Hij ; last by rewrite ffunE.
-  exact : rew_const.
-  Qed.
-
-
   Definition player3 := [finType of 'I_3].
   Definition player4 := [finType of 'I_4].
+
+  Definition player4_num i : player4 := inord i.
+
+  Lemma card_player4_ltn2 (i : player4) :
+    #|[pred j : player4 | (j < player4_num 2) == (i < player4_num 2)]| = 2.
+  Proof.
+  rewrite /player4_num inordK => //.
+  case (boolP (i < 2)) => // Hi.
+  - Search _ (card _) "D".
+    Search _ (_ == true).
+    Check (cardD1x).
+    Search _ "ltn".
+    rewrite (@cardD1x _ _ (inord 0)).
+    rewrite (@cardD1x _ _ (inord 1)).
+    Search _ "addn".
+    rewrite addnA -{12}(addn0 2).
+    Search _ addn subn.
+    Search _ "addn".
+    Search _ (_ + _ = _ -> _ = _ - _).
+    Check addnC.
+  Admitted.
+
   
   Section Example1.
 
@@ -47,56 +148,35 @@ Section Examples.
        They can have lunch in R1 or R2 (modelized with R1=true and R2=false).
        They want to eat with the people they like the most *)
 
-    Definition example1 (aff : player4 -> player4 -> nat) : NFGame.game player4 :=
+    Definition example1
+               (aff : player4 -> player4 -> nat) : NFGame.game player4
+      :=
       {| NFGame.outcome := fun _ => nat ;
          NFGame.preceq := fun _ => leq ;
          NFGame.action := fun _ => bool_finType ;
          NFGame.utility :=
-           fun i p => \sum_(j | (i != j) && (p i == p j)) aff i j ;
+           fun i p => \sum_(j | (j != i) && (p i == p j)) aff i j ;
       |}.
-
-    Lemma utility_allsame_eq4 i (b : NFGame.action (example1 (fun _ _ => 1)) i) :
-      @NFGame.utility _ (example1 (fun _ _ => 1)) i [ffun _ => b] = 3.
-    Proof.
-    simpl ; rewrite (eq_bigl [pred j | j \in (setT :\ i)]) => /=.
-    - rewrite big_const => /=.
-      have := cardsD1 i setT.
-      rewrite cardsT in_setT card_ord add1n => /= H.
-      have H2 := eq_add_S _ _ H.
-        by rewrite -H2.
-    - move => j .
-      case (boolP (i == j)) => H /=.
-      + by rewrite in_setD1 (eqP H) eqxx.
-      + rewrite eq_sym in H.
-          by rewrite !ffunE eqxx in_setD1 in_setT H.
-    Qed.
-
-    Lemma utility_move_eq0 i (b : NFGame.action (example1 (fun _ _ => 1)) i) :
-      @NFGame.utility _ (example1 (fun _ _ => 1)) i (@move _ _ [ffun _ => b] i (~~b)) = 0.
-    Proof.
-    simpl.
-    rewrite (eq_bigr (fun _ => 0)) => //= [|j /andP H].
-    - by rewrite big_const iter_add0.
-    - destruct H.
-      move: H0.
-      rewrite !ffunE.
-      case (boolP (i == i)) => H1 ; case (boolP (i == j)) => H2.
-      + have H' := H. rewrite (eqP H2) in H'. move/eqP in H' ; contradiction.
-      + by rewrite f_equal_dep ; case b. 
-      + move/eqP in H1 ; contradiction.
-      + move/eqP in H1 ; contradiction.
-    Qed.      
 
     
     Lemma NashEq_ex1 (b : bool) :
-      @NFGame.NashEq _ (example1 (fun _ _ => 1)) [ffun _ => b].
+      let aff := fun i j => 1
+      in
+      @NFGame.NashEq _ (example1 aff) [ffun _ => b].
     Proof.
-    move => i ai.
+    move => aff i ai => /=.
     case (boolP (ai == b)) => Hai.
-    - rewrite (eqP Hai) move_bool_eq /prec.
-        by destruct (NFGame.preceq (NFGame.utility i _) (NFGame.utility i _)).
+    - by rewrite (eqP Hai) move_constprof_eq /prec andbN.
     - rewrite neqb_eqf in Hai.
-        by rewrite (eqP Hai) utility_allsame_eq4 utility_move_eq0. 
+      rewrite /prec.
+      rewrite move_constprofE eqxx (eqP Hai).
+      rewrite {1}(eq_bigl (predC1 i)).
+      + rewrite big_addi big_pred0 => /= [|j]; first by rewrite andbF.
+        rewrite (move_constprofE _ _ b (~~b) i j).
+        case (boolP (i == j)) => /eqP Hij ; first by rewrite Hij eqxx andFb.
+          by rewrite (eq_sym _ b) -neqb_eqf eqxx andbF.
+      + rewrite ffunE => j.
+          by rewrite ffunE eqxx andbT.
     Qed.
 
   End Example1.
@@ -106,24 +186,132 @@ Section Examples.
 
   Section Example2.
 
-    Definition example2 (aff : player4 -> player4 -> nat) (tps : player4 -> player4 -> nat) : NFGame.game player4 :=
+    Definition example2
+               (aff : player4 -> player4 -> nat)
+               (tps : player4 -> player4 -> nat) : NFGame.game player4
+      :=
       {| NFGame.outcome := fun _ => prod nat nat ;
          NFGame.preceq := fun _ => fun x y => leq x.1 y.1 && leq x.2 y.2 ;
          NFGame.action := fun _ => bool_finType ;
          NFGame.utility :=
-           fun i p => (\sum_(j | (i != j) && (p i == p j)) aff i j,
-                       \sum_(j | (i != j) && (p i == p j)) tps i j) ;
+           fun i p => (\sum_(j | (j != i) && (p i == p j)) aff i j,
+                       \sum_(j | (j != i) && (p i == p j)) tps i j) ;
       |}.
-
-    Lemma NashEq_ex2 :
+    Print xpredC1.
+    Lemma NashEq_ex2a (b : bool):
+      let aff := fun i j => 1
+      in
       forall (tps : player4 -> player4 -> nat),
-      @NFGame.NashEq _ (example2 (fun _ _ => 1) tps) [ffun _ => true].
+      @NFGame.NashEq _ (example2 aff tps) [ffun _ => b].
     Proof.
-    move => tps i ai.
-    case (boolP ai) => Hai.
-    - rewrite move_bool_eq /prec.
-        by destruct (NFGame.preceq (NFGame.utility i _) (NFGame.utility i _)).
-    - by admit.
+    move => aff tps i ai => /=.
+    case (boolP (ai == b)) => Hai.
+    - by rewrite (eqP Hai) move_constprof_eq /prec andbN.
+    - rewrite neqb_eqf in Hai.
+      rewrite move_constprofE eqxx (eqP Hai).
+      rewrite (eq_bigl (predC1 i)) ;
+        last by rewrite !ffunE => j ; rewrite ffunE eqxx andbT.
+      rewrite big_addi (eq_bigl (predC1 i)) ;
+        last by rewrite !ffunE => j ; rewrite ffunE eqxx andbT.
+      rewrite (@big_pred0 _ _ _ _ _
+          [pred j | (j != i) && (~~ b == move (N:=player4) (X:=fun=> bool_finType) [ffun=> b] (i:=i) (~~ b) j)]) => [|j /=];
+        first by rewrite cardC1 card_ord.
+      rewrite move_constprofE.
+      case (boolP (i == j)) => /eqP Hij.
+      + by rewrite Hij eqxx andFb.
+      + by rewrite (eq_sym _ b) -neqb_eqf eqxx andbF.
+    Qed.
+
+    Lemma NashEq_ex2b (b : bool) :
+      let aff := fun i j => 1
+      in
+      let tps := fun i j => if (i < 2) == (j < 2) then 10 else 1
+      in
+      @NFGame.NashEq _ (example2 aff tps) [ffun i : player4 => if i < player4_num 2 then b else ~~b].
+    Proof.
+    - have th (j : player4) : (if j < player4_num 2 then b else ~~b) = [ffun k : player4 => if k < player4_num 2 then b else ~~b] j.
+        by rewrite !inordK => // ; rewrite ffunE.
+    - have th2 (j : player4) : (if j < player4_num 2 then ~~b else b) = [ffun k : player4 => if k < player4_num 2 then ~~b else b] j.
+        by rewrite !inordK => // ; rewrite ffunE.
+
+    - have th_pnum (j : player4) : j < player4_num 2 -> j < 2. by rewrite inordK.
+    - have th_pnum' (j : player4) : ~~ (j < player4_num 2) -> (j < 2) = false.
+        by move => H ; apply negbTE ; rewrite inordK in H.
+    - have th_pnum'' (i j : player4) : (i < player4_num 2) = (j < player4_num 2) -> (i < 2) = (j < 2).
+      case (boolP (i < player4_num 2)) => Hi ; case (boolP (j < player4_num 2)) => Hj.
+      + by rewrite !th_pnum.
+      + by rewrite (th_pnum _ Hi) th_pnum'.
+      + by rewrite (th_pnum' _ Hi) th_pnum.
+      + by rewrite (th_pnum' _ Hi) (th_pnum' _ Hj).
+    - have th_pnum''' (i j : player4) : (i < player4_num 2) != (j < player4_num 2) -> (i < 2) == (j < 2) = false.
+      case (boolP (i < player4_num 2)) => Hi ; case (boolP (j < player4_num 2)) => Hj.
+      + by rewrite !th_pnum.
+      + by rewrite (th_pnum _ Hi) th_pnum'.
+      + by rewrite (th_pnum' _ Hi) th_pnum.
+      + by rewrite (th_pnum' _ Hi) (th_pnum' _ Hj).
+
+    - have th_ffun (i j : player4) : (j != i) && ([ffun i1 : player4 => if i1 < player4_num 2 then b else ~~ b] i == [ffun i1 : player4 => if i1 < player4_num 2 then b else ~~ b] j) = (j != i) && ((i < player4_num 2) == (j < player4_num 2)).
+      rewrite !ffunE.
+      case (i < player4_num 2) ; case (j < player4_num 2).
+      + by rewrite eqxx.
+      + by rewrite -neqb_eqf eqxx.
+      + by rewrite (eq_sym _ b) -neqb_eqf eqxx.
+      + by rewrite eqxx.
+
+      
+
+        
+    - move => aff tps i ai => /=.
+      case (boolP (ai == if i < player4_num 2 then b else ~~b)) => Hai.
+      + rewrite (eqP Hai).
+          by rewrite th -move_prof_eq /prec andbN.
+
+      + have th_move (j : player4) : (j != i) && (move (N:=player4) (X:=fun=> bool_finType) [ffun i1 : player4 => if i1 < player4_num 2 then b else ~~ b] (i:=i) ai i == move (N:=player4) (X:=fun=> bool_finType) [ffun i1 : player4 => if i1 < player4_num 2 then b else ~~ b] (i:=i) ai j)
+                                     = (j != i) && ((i < player4_num 2) != (j < player4_num 2)).
+        case (boolP (j == i)) => /eqP H ; first by rewrite andFb.
+        rewrite move_profconst_ii move_prof_ij.
+        rewrite neqb_eqf fun_if Bool.negb_involutive in Hai.
+        rewrite !ffunE (eqP Hai).
+        case (boolP (i < player4_num 2)) => Hi ; case (boolP (j < player4_num 2)) => Hj.
+        * by rewrite (eq_sym _ b) -neqb_eqf eqxx.
+        * by rewrite eqxx.
+        * by rewrite eqxx.
+        * by rewrite -neqb_eqf eqxx.
+        * by rewrite eq_sym ; apply /eqP.
+
+      + rewrite (eq_bigl (fun j => (j != i) && ((i < player4_num 2) == (j < player4_num 2)))) => [|j] ;
+          last by rewrite th_ffun.
+        rewrite big_addi.
+        rewrite (eq_bigl (fun j => (j != i) && ((i < player4_num 2) == (j < player4_num 2)))) => [|j] ;
+          last by rewrite th_ffun.
+        rewrite (eq_bigr (fun _ => 10)) => [|j /andP H] ; 
+           last destruct H ;
+           last by rewrite /tps (th_pnum'' _ _ (eqP H0)) eqxx.
+        rewrite big_addi.
+        rewrite (eq_bigl (fun j => (j != i) && ((i < player4_num 2) != (j < player4_num 2)))) => [|j] ;
+          last by rewrite th_move.
+        rewrite big_addi.
+        rewrite (eq_bigl (fun j => (j != i) && ((i < player4_num 2) != (j < player4_num 2)))) => [|j] ;
+          last by rewrite th_move.
+        rewrite (eq_bigr (fun _ => 1)) => [|j /andP H] ;
+          last destruct H ;
+          last by rewrite /tps (th_pnum''' _ _ H0).
+        rewrite big_addi.
+
+        rewrite /prec => /=.
+        Check max_card (fun j : player4 => (j != i) && ((i < player4_num 2) == (j < player4_num 2))).
+        Search _ "leq" "trans".
+        rewrite !muln1.
+        have th_card1 :
+          #|[pred j : 'I_4 | (j != i) && ((i < player4_num 2) == (j < player4_num 2))]| = 1.
+        Search _ (card _) "ltn".
+        Search _ card pred.
+        Check cardD1x _.
+          by admit.
+        have th_card2 :
+          #|[pred j : 'I_4 | (j != i) && ((i < player4_num 2) != (j < player4_num 2))]| = 2.
+          by admit.
+        by rewrite th_card1 th_card2.
     Admitted.
 
   End Example2.  
