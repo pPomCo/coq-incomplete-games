@@ -19,6 +19,8 @@ Unset Printing Implicit Defensive.
 
 Section GeneralLemmae.
 
+  (*| Decidability of eqTypes |*)
+  
   Lemma eqType_dec (T : eqType) :
     forall t1 t2 : T, t1 = t2 \/ t1 <> t2.
   Proof.
@@ -73,23 +75,26 @@ Games
 =====
 
 Three forms of games are defined in the corresponding modules:
+
 - Standard Normal Form Games (NFGames)
+
 - Hypergraphical Games (HGGames)
-- Incomplete Games (IGames) (i.e. generalization of bayesian games to any
-  plausibility distribution)
+
+- Incomplete Games (IGames) (i.e. generalization of bayesian games to any plausibility distribution)
+
 |*)
 
 Section Games.
 
-  (*|
-    Profiles
-    -------
+(*|
+Profiles
+-------
 
-    A 'profile' is a dependent vector which contains a (X i) for all player i.
-    Typically, a strategy profile is a strategy for each player i.
+A 'profile' is a dependent vector which contains a (X i) for all player i.
+Typically, a strategy profile is a strategy for each player i.
 
-    We represent profiles with dependent finite-support functions (dffun)
-    |*)
+We represent profiles with dependent finite-support functions (dffun)
+|*)
 
   Section Profiles.
 
@@ -123,8 +128,8 @@ Section Games.
       fun theta => [ffun i => p i (theta i)].
 
     Definition proj_flatprofile N (T : N -> finType) X
-               (p : profile (fun it => X (projT1 it)))
-      : profile T -> profile X :=
+               (p : profile (fun it => X (projT1 it))) 
+     : profile T -> profile X :=
       fun theta => [ffun i => p (existT _ i (theta i))].
 
     Lemma proj_iprof_flatprof N (T : N -> finType) X (p : iprofile T X) theta :
