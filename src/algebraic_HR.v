@@ -1,3 +1,12 @@
+(*|
+============================================
+Algebraic n-players Howson-Rosenthal theorem
+============================================
+:Auteurs: Pierre Pomeret-Coquot
+:Date:    RJCIA 2021
+
+|*)
+
 From Coq Require Import ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
@@ -10,6 +19,8 @@ Unset Printing Implicit Defensive.
 
 Section GeneralLemmae.
 
+  (*| Decidability of eqTypes |*)
+  
   Lemma eqType_dec (T : eqType) :
     forall t1 t2 : T, t1 = t2 \/ t1 <> t2.
   Proof.
@@ -23,10 +34,24 @@ End GeneralLemmae.
 
 
 
+(*|
+Evaluation structure
+====================
+
+Evaluation structure encapsulate domains, orders and operators for GEU:
+
+- Utility domain U ordered by preceq_U
+
+- Plausibility domain W ordered by preceq_W
+
+- Valuation domain V ordered by preceq_V
+
+- otimes and oplus operators
+
+|*)
 
 Section EvalStruct.
 
-  (* Evaluation structure: domains, orders and operators for GEU *)
 
   Record eval_struct : Type :=
     { U : finType ;
@@ -40,7 +65,7 @@ Section EvalStruct.
       otimes : W -> U -> V ;
     }.
 
-  (* The asymetric part of preceq *)
+  (*| Asymetric part of preceq |*)
   Definition prec T (preceq : rel T) : rel T :=
     fun t1 t2 => (preceq t1 t2) && ~~ (preceq t2 t1).
 
@@ -50,21 +75,43 @@ End EvalStruct.
 
 
 
+(*|
+Games
+=====
 
+Three forms of games are defined in the corresponding modules:
+
+- Standard Normal Form Games (NFGames)
+
+- Hypergraphical Games (HGGames)
+
+- Incomplete Games (IGames) (i.e. generalization of bayesian games to any plausibility distribution)
+
+|*)
 
 Section Games.
+
+(*|
+Profiles
+--------
+
+A 'profile' is a dependent vector which contains a (X i) for all player i.
+Typically, a strategy profile is a strategy for each player i.
+
+We represent profiles with dependent finite-support functions (dffun)
+|*)
 
   Section Profiles.
 
     Implicit Type (N : finType).
 
-    (* Profile for classical games *)
+    (*| Profile for classical games |*)
     Definition profile (N : finType) (X : N -> eqType) := {dffun forall i, X i}.
 
-    (* Finite profile *)
+    (*| Finite profile |*)
     Definition fprofile N (X : N -> finType) := {dffun forall i, X i}.
 
-    (* Change the strategy of a given player in a given profile *)
+    (*| Change the strategy of a given player in a given profile |*)
     Definition move N X (p : profile X) (i : N) (pi : X i) : profile X :=
       [ffun j => match boolP (i == j) with
                  | AltTrue h => eq_rect _ X pi _ (eqP h)
@@ -73,10 +120,11 @@ Section Games.
 
 
 
-    (* Profile for incomplete games *)
+    (*| Profile for incomplete games |*)
     Definition iprofile N (T : N -> finType) (X : N -> eqType) :=
       {dffun forall i, T i -> X i}.
 
+    (*| Transform an iprofile to a profile such as support is the set of dependent pairs (i,t_i) |*)
     Definition iprofile_flatten N (T : N -> finType) X (p : iprofile T X)
       : profile (fun it => X (projT1 it)) :=
       [ffun it => p (projT1 it) (projT2 it)].
@@ -86,8 +134,8 @@ Section Games.
       fun theta => [ffun i => p i (theta i)].
 
     Definition proj_flatprofile N (T : N -> finType) X
-               (p : profile (fun it => X (projT1 it)))
-      : profile T -> profile X :=
+               (p : profile (fun it => X (projT1 it))) 
+     : profile T -> profile X :=
       fun theta => [ffun i => p (existT _ i (theta i))].
 
     Lemma proj_iprof_flatprof N (T : N -> finType) X (p : iprofile T X) theta :
