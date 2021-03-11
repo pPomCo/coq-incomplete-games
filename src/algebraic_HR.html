@@ -106,11 +106,13 @@ New coercion path [GRing.divalg_closedBdiv;
 </span></span><span class="alectryon-wsp"><span class="highlight">
 </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">GeneralLemmae</span>.</span></span></span></pre><div class="section" id="evaluation-structure">
 <h1>Evaluation structure</h1>
-<p>Evaluation structure encapsulate domains, orders and operators for GEU:
-- Utility domain U ordered by preceq_U
-- Plausibility domain W ordered by preceq_W
-- Valuation domain V ordered by preceq_V
-- otimes and oplus operators</p>
+<p>Evaluation structure encapsulate domains, orders and operators for GEU:</p>
+<ul class="simple">
+<li>Utility domain U ordered by preceq_U</li>
+<li>Plausibility domain W ordered by preceq_W</li>
+<li>Valuation domain V ordered by preceq_V</li>
+<li>otimes and oplus operators</li>
+</ul>
 <pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">EvalStruct</span>.</span></span><span class="alectryon-wsp">
 </span></span><span class="alectryon-wsp"><span class="highlight">
 
@@ -139,41 +141,22 @@ New coercion path [GRing.divalg_closedBdiv;
 </ul>
 <pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">Games</span>.</span></span></span></pre><div class="section" id="profiles">
 <h2>Profiles</h2>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">src/algebraic_HR.v</tt>, line 91)</p>
-<p>Title underline too short.</p>
-<pre class="literal-block">
-Profiles
--------
-</pre>
-</div>
 <p>A 'profile' is a dependent vector which contains a (X i) for all player i.
 Typically, a strategy profile is a strategy for each player i.</p>
 <p>We represent profiles with dependent finite-support functions (dffun)</p>
 <pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="highlight">  </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">Profiles</span>.</span></span><span class="alectryon-wsp">
 </span></span><span class="alectryon-wsp"><span class="highlight">
-</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Implicit Type</span> (N : finType).</span></span><span class="alectryon-wsp">
-</span></span><span class="alectryon-wsp"><span class="highlight">
-    <span class="c">(* Profile for classical games *)</span>
-</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">profile</span> (<span class="nv">N</span> : finType) (<span class="nv">X</span> : N -&gt; eqType) := {dffun <span class="kr">forall</span> <span class="nv">i</span>, X i}.</span></span><span class="alectryon-wsp">
-</span></span><span class="alectryon-wsp"><span class="highlight">
-    <span class="c">(* Finite profile *)</span>
-</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">fprofile</span> <span class="nv">N</span> (<span class="nv">X</span> : N -&gt; finType) := {dffun <span class="kr">forall</span> <span class="nv">i</span>, X i}.</span></span><span class="alectryon-wsp">
-</span></span><span class="alectryon-wsp"><span class="highlight">
-    <span class="c">(* Change the strategy of a given player in a given profile *)</span>
-</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">move</span> <span class="nv">N</span> <span class="nv">X</span> (<span class="nv">p</span> : profile X) (<span class="nv">i</span> : N) (<span class="nv">pi</span> : X i) : profile X :=
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Implicit Type</span> (N : finType).</span></span></span></pre><p>Profile for classical games</p>
+<pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="highlight">    </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">profile</span> (<span class="nv">N</span> : finType) (<span class="nv">X</span> : N -&gt; eqType) := {dffun <span class="kr">forall</span> <span class="nv">i</span>, X i}.</span></span></span></pre><p>Finite profile</p>
+<pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="highlight">    </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">fprofile</span> <span class="nv">N</span> (<span class="nv">X</span> : N -&gt; finType) := {dffun <span class="kr">forall</span> <span class="nv">i</span>, X i}.</span></span></span></pre><p>Change the strategy of a given player in a given profile</p>
+<pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="highlight">    </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">move</span> <span class="nv">N</span> <span class="nv">X</span> (<span class="nv">p</span> : profile X) (<span class="nv">i</span> : N) (<span class="nv">pi</span> : X i) : profile X :=
       [ffun j =&gt; <span class="kr">match</span> boolP (i == j) <span class="kr">with</span>
                  | AltTrue h =&gt; eq_rect _ X pi _ (eqP h)
                  | AltFalse _ =&gt;  p j
-                 <span class="kr">end</span>].</span></span><span class="alectryon-wsp">
-</span></span><span class="alectryon-wsp"><span class="highlight">
-
-
-    <span class="c">(* Profile for incomplete games *)</span>
-</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">iprofile</span> <span class="nv">N</span> (<span class="nv">T</span> : N -&gt; finType) (<span class="nv">X</span> : N -&gt; eqType) :=
-      {dffun <span class="kr">forall</span> <span class="nv">i</span>, T i -&gt; X i}.</span></span><span class="alectryon-wsp">
-</span></span><span class="alectryon-wsp"><span class="highlight">
-</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">iprofile_flatten</span> <span class="nv">N</span> (<span class="nv">T</span> : N -&gt; finType) <span class="nv">X</span> (<span class="nv">p</span> : iprofile T X)
+                 <span class="kr">end</span>].</span></span></span></pre><p>Profile for incomplete games</p>
+<pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="highlight">    </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">iprofile</span> <span class="nv">N</span> (<span class="nv">T</span> : N -&gt; finType) (<span class="nv">X</span> : N -&gt; eqType) :=
+      {dffun <span class="kr">forall</span> <span class="nv">i</span>, T i -&gt; X i}.</span></span></span></pre><p>Transform an iprofile to a profile such as support is the set of dependent pairs (i,t_i)</p>
+<pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="highlight">    </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">iprofile_flatten</span> <span class="nv">N</span> (<span class="nv">T</span> : N -&gt; finType) <span class="nv">X</span> (<span class="nv">p</span> : iprofile T X)
       : profile (<span class="kr">fun</span> <span class="nv">it</span> =&gt; X (projT1 it)) :=
       [ffun it =&gt; p (projT1 it) (projT2 it)].</span></span><span class="alectryon-wsp">
 </span></span><span class="alectryon-wsp"><span class="highlight">

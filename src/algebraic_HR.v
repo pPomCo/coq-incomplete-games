@@ -39,10 +39,15 @@ Evaluation structure
 ====================
 
 Evaluation structure encapsulate domains, orders and operators for GEU:
+
 - Utility domain U ordered by preceq_U
+
 - Plausibility domain W ordered by preceq_W
+
 - Valuation domain V ordered by preceq_V
+
 - otimes and oplus operators
+
 |*)
 
 Section EvalStruct.
@@ -88,7 +93,7 @@ Section Games.
 
 (*|
 Profiles
--------
+--------
 
 A 'profile' is a dependent vector which contains a (X i) for all player i.
 Typically, a strategy profile is a strategy for each player i.
@@ -100,13 +105,13 @@ We represent profiles with dependent finite-support functions (dffun)
 
     Implicit Type (N : finType).
 
-    (* Profile for classical games *)
+    (*| Profile for classical games |*)
     Definition profile (N : finType) (X : N -> eqType) := {dffun forall i, X i}.
 
-    (* Finite profile *)
+    (*| Finite profile |*)
     Definition fprofile N (X : N -> finType) := {dffun forall i, X i}.
 
-    (* Change the strategy of a given player in a given profile *)
+    (*| Change the strategy of a given player in a given profile |*)
     Definition move N X (p : profile X) (i : N) (pi : X i) : profile X :=
       [ffun j => match boolP (i == j) with
                  | AltTrue h => eq_rect _ X pi _ (eqP h)
@@ -115,10 +120,11 @@ We represent profiles with dependent finite-support functions (dffun)
 
 
 
-    (* Profile for incomplete games *)
+    (*| Profile for incomplete games |*)
     Definition iprofile N (T : N -> finType) (X : N -> eqType) :=
       {dffun forall i, T i -> X i}.
 
+    (*| Transform an iprofile to a profile such as support is the set of dependent pairs (i,t_i) |*)
     Definition iprofile_flatten N (T : N -> finType) X (p : iprofile T X)
       : profile (fun it => X (projT1 it)) :=
       [ffun it => p (projT1 it) (projT2 it)].
