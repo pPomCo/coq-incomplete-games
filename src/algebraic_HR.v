@@ -1,3 +1,12 @@
+(*|
+============================================
+Algebraic n-players Howson-Rosenthal theorem
+============================================
+:Auteurs: Pierre Pomeret-Coquot
+:Date:    RJCIA 2021
+
+|*)
+
 From Coq Require Import ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
@@ -23,10 +32,19 @@ End GeneralLemmae.
 
 
 
+(*|
+Evaluation structure
+====================
+
+Evaluation structure encapsulate domains, orders and operators for GEU:
+- Utility domain U ordered by preceq_U
+- Plausibility domain W ordered by preceq_W
+- Valuation domain V ordered by preceq_V
+- otimes and oplus operators
+|*)
 
 Section EvalStruct.
 
-  (* Evaluation structure: domains, orders and operators for GEU *)
 
   Record eval_struct : Type :=
     { U : finType ;
@@ -40,7 +58,7 @@ Section EvalStruct.
       otimes : W -> U -> V ;
     }.
 
-  (* The asymetric part of preceq *)
+  (*| Asymetric part of preceq |*)
   Definition prec T (preceq : rel T) : rel T :=
     fun t1 t2 => (preceq t1 t2) && ~~ (preceq t2 t1).
 
@@ -50,9 +68,28 @@ End EvalStruct.
 
 
 
+(*|
+Games
+=====
 
+Three forms of games are defined in the corresponding modules:
+- Standard Normal Form Games (NFGames)
+- Hypergraphical Games (HGGames)
+- Incomplete Games (IGames) (i.e. generalization of bayesian games to any
+  plausibility distribution)
+|*)
 
 Section Games.
+
+  (*|
+    Profiles
+    -------
+
+    A 'profile' is a dependent vector which contains a (X i) for all player i.
+    Typically, a strategy profile is a strategy for each player i.
+
+    We represent profiles with dependent finite-support functions (dffun)
+    |*)
 
   Section Profiles.
 
