@@ -2,36 +2,33 @@
 ============================================
 Algebraic n-players Howson-Rosenthal theorem
 ============================================
-:Auteurs: Pierre Pomeret-Coquot
-:Date:    RJCIA 2021
+:Auteur: Pierre Pomeret-Coquot
+:Date:   RJCIA 2021
 
 |*)
 
 From Coq Require Import ssreflect.
-From mathcomp Require Import all_ssreflect.
-From mathcomp Require Import all_algebra.
+From mathcomp Require Import all_ssreflect. (* .none *)
+From mathcomp Require Import all_algebra. (* .none *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 
-
-
 Section GeneralLemmae.
 
   (*| Decidability of eqTypes |*)
-  
+
   Lemma eqType_dec (T : eqType) :
     forall t1 t2 : T, t1 = t2 \/ t1 <> t2.
   Proof.
   move => t1 t2.
   case (boolP (t1 == t2)) => /eqP H.
-  - by apply or_introl.
-  - by apply or_intror.
+  - exact: or_introl.
+  - exact: or_intror.
   Qed.
 
 End GeneralLemmae.
-
 
 
 (*|
@@ -52,7 +49,6 @@ Evaluation structure encapsulate domains, orders and operators for GEU:
 
 Section EvalStruct.
 
-
   Record eval_struct : Type :=
     { U : finType ;
       W : eqType ;
@@ -72,9 +68,6 @@ Section EvalStruct.
 End EvalStruct.
 
 
-
-
-
 (*|
 Games
 =====
@@ -85,7 +78,7 @@ Three forms of games are defined in the corresponding modules:
 
 - Hypergraphical Games (HGGames)
 
-- Incomplete Games (IGames) (i.e. generalization of bayesian games to any plausibility distribution)
+- Incomplete Games (IGames) (i.e. generalization of Bayesian games to any plausibility distribution)
 
 |*)
 
@@ -119,7 +112,6 @@ We represent profiles with dependent finite-support functions (dffun)
                  end].
 
 
-
     (*| Profile for incomplete games |*)
     Definition iprofile N (T : N -> finType) (X : N -> eqType) :=
       {dffun forall i, T i -> X i}.
@@ -134,17 +126,16 @@ We represent profiles with dependent finite-support functions (dffun)
       fun theta => [ffun i => p i (theta i)].
 
     Definition proj_flatprofile N (T : N -> finType) X
-               (p : profile (fun it => X (projT1 it))) 
+               (p : profile (fun it => X (projT1 it)))
      : profile T -> profile X :=
       fun theta => [ffun i => p (existT _ i (theta i))].
 
     Lemma proj_iprof_flatprof N (T : N -> finType) X (p : iprofile T X) theta :
       (proj_iprofile p theta) = (proj_flatprofile (iprofile_flatten p) theta).
     Proof.
-    by apply eq_dffun => i ; rewrite ffunE.
+    by apply: eq_dffun => i; rewrite ffunE.
     Qed.
 
-    
     Definition bmove N T X (p : iprofile T X) (i : N) ti xi
       : iprofile T X :=
       [ffun j => fun tj => match boolP (i == j) with
@@ -155,8 +146,6 @@ We represent profiles with dependent finite-support functions (dffun)
                                else p j tj
                            | AltFalse _ => p j tj
                            end].
-
-
 
     Lemma move_bmove N T X (p : iprofile T X) (it : {i : N & T i})
           (xi : X (projT1 it)) :
@@ -170,33 +159,23 @@ We represent profiles with dependent finite-support functions (dffun)
     - case (boolP ((eq_rect _ _ (projT2 it) (projT1 it')  (@elimT
             (@eq (Finite.sort N) _ _) _ eqP H2)) == (projT2 it'))) => H3.
       + rewrite (rew_map X _ (eqP H1) xi).
-          by rewrite (Eqdep_dec.eq_proofs_unicity
-                (@eqType_dec N) (f_equal _ (eqP H1))(eqP H2)).
+        by rewrite (Eqdep_dec.eq_proofs_unicity
+           (@eqType_dec N) (f_equal _ (eqP H1))(eqP H2)).
       + move/eqP in H3.
         have Hcontra := projT2_eq (eqP H1).
-        rewrite (Eqdep_dec.eq_proofs_unicity (@eqType_dec N)
-                  (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
-          by contradiction.
-    - move /eqP in H2.
-      rewrite (eqP H1) in H2.
-        by contradiction.
+        by rewrite (Eqdep_dec.eq_proofs_unicity (@eqType_dec N)
+                (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
+    - move/eqP in H2.
+      by rewrite (eqP H1) in H2.
     - case (boolP ((eq_rect _ _ (projT2 it) (projT1 it')  (@elimT
             (@eq (Finite.sort N) _ _) _ eqP H2)) == (projT2 it'))) => H3 //.
       have Hcontra := eq_sigT it it' (eqP H2) (eqP H3).
-      move /eqP in H1.
-        by contradiction.
+      by move/eqP in H1.
     Qed.
-
 
   End Profiles.
 
 End Games.
-
-
-
-
-
-
 
 
 Module NFGame.
@@ -207,7 +186,7 @@ Module NFGame.
     { outcome : player -> Type ;
       action : player -> finType ;
       utility : forall i, profile action -> outcome i ;
-      preceq : forall i, rel (outcome i) ; 
+      preceq : forall i, rel (outcome i) ;
     }.
 
   Definition NashEqb player (g : game player)
@@ -226,15 +205,14 @@ Module NFGame.
     reflect (NashEq p) (NashEqb p).
   Proof.
   case (boolP (NashEqb p)) ; constructor ; move: i.
-  - move /forallP => H i ; move: (H i).
-    move /forallP => H2 ai ; move: (H2 ai) => H0.
-      exact : (negP H0).
-  - move /forallPn => H ; destruct H ; move : H.
-    move /forallPn => H ; destruct H ; move : H.
-    move /negPn => H Hne.
-      by destruct (Hne x x0).
+  - move/forallP => H i ; move: (H i).
+    move/forallP => H2 ai ; move: (H2 ai) => H0.
+    exact: (negP H0).
+  - move/forallPn => [] x.
+    move/forallPn => [] y.
+    move/negPn => [H Hne].
+    by case: (Hne x y).
   Qed.
-
 
 End NFGame.
 
@@ -288,11 +266,9 @@ Module HGGame.
 End HGGame.
 
 
-
-
 Module IGame.
 
-  (* Incomplete games such as bayesian games and possibilistic games *)
+  (* Incomplete games such as Bayesian games and possibilistic games *)
 
   Record game (player : finType) : Type :=
     { evalst : player -> eval_struct ;
@@ -340,31 +316,23 @@ Module IGame.
     forall ai : action g i,
     ~ prec (@preceq_V _) (GEutility t p) (GEutility t (bmove p t ai)).
 
-
   Lemma NashEqP player (g : game player)
         (p : iprofile (signal g) (action g)) :
     reflect (NashEq p) (NashEqb p).
   Proof.
   case (boolP (NashEqb p)) ; constructor ; move: i.
-  - move /forallP => H i ; move: (H i).
-    move /forallP => H2 t ; move: (H2 t).
-    move /forallP => H3 ai ; move: (H3 ai) => H0.
-      exact : negP H0.
-  - move /forallPn => H ; destruct H ; move : H.
-    move /forallPn => H ; destruct H ; move : H.
-    move /forallPn => H ; destruct H ; move : H.
-    move /negPn => H2 Hne.
-    have Hcontra := Hne x x0 x1.
-      by contradiction.
+  - move/forallP => H i ; move: (H i).
+    move/forallP => H2 t ; move: (H2 t).
+    move/forallP => H3 ai ; move: (H3 ai) => H0.
+    exact: negP H0.
+  - move/forallPn => [] x.
+    move/forallPn => [] y.
+    move/forallPn => [] z.
+    move/negPn => H2 Hne.
+    by move/(_ x y z) in Hne.
   Qed.
 
 End IGame.
-
-
-
-
-
-
 
 
 Section HR.
@@ -378,7 +346,7 @@ Section HR.
   rewrite /IGame.GEutility /HGGame.global_utility
           /IGame.to_hggame => player g i t p //=.
   apply eq_bigr => theta Htheta.
-    by rewrite -proj_iprof_flatprof.
+  by rewrite -proj_iprof_flatprof.
   Qed.
 
   Lemma HowsonRosenthal_NashEqb :
@@ -388,13 +356,13 @@ Section HR.
     = IGame.NashEqb p.
   Proof.
   move => player g p.
-  apply /NFGame.NashEqP /IGame.NashEqP => /=.
+  apply/NFGame.NashEqP /IGame.NashEqP => /=.
   - rewrite /NFGame.NashEq /IGame.NashEq => /= H i t ai.
     move : (H (existT _ i t) ai).
-      by rewrite {1}/iprofile_flatten !HowsonRosenthal move_bmove.
+    by rewrite {1}/iprofile_flatten !HowsonRosenthal move_bmove.
   - rewrite /NFGame.NashEq /IGame.NashEq => /= H it ai.
     have H' := (H (projT1 it) (projT2 it) ai).
-      by rewrite {1 2 3 4}(sigT_eta it) move_bmove -!HowsonRosenthal.
+    by rewrite {1 2 3 4}(sigT_eta it) move_bmove -!HowsonRosenthal.
   Qed.
 
   Lemma HowsonRosenthal_NashEq :
@@ -405,17 +373,9 @@ Section HR.
   Proof.
   split => H.
   - apply/IGame.NashEqP ; move/HGGame.NashEqP in H.
-      by rewrite -(HowsonRosenthal_NashEqb p).
+    by rewrite -(HowsonRosenthal_NashEqb p).
   - apply/HGGame.NashEqP ; move/IGame.NashEqP in H.
-      by rewrite (HowsonRosenthal_NashEqb p).
+    by rewrite (HowsonRosenthal_NashEqb p).
   Qed.
 
 End HR.
-
-
-
-
-
-
-
-
