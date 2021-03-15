@@ -50,15 +50,15 @@ Evaluation structure encapsulate domains, orders and operators for GEU:
 Section EvalStruct.
 
   Record eval_struct : Type :=
-    { U : finType ;
-      W : eqType ;
-      V : eqType ;
-      V0 : V ;
-      preceq_U : rel U ;
-      preceq_W : rel W ;
-      preceq_V : rel V ;
-      oplus : Monoid.com_law V0 ;
-      otimes : W -> U -> V ;
+    { U : finType;
+      W : eqType;
+      V : eqType;
+      V0 : V;
+      preceq_U : rel U;
+      preceq_W : rel W;
+      preceq_V : rel V;
+      oplus : Monoid.com_law V0;
+      otimes : W -> U -> V;
     }.
 
   (*| Asymetric part of preceq |*)
@@ -66,6 +66,101 @@ Section EvalStruct.
     fun t1 t2 => (preceq t1 t2) && ~~ (preceq t2 t1).
 
 End EvalStruct.
+
+
+
+(*|
+Profiles
+--------
+
+A 'profile' is a dependent vector which contains a (X i) for all player i.
+Typically, a strategy profile is a strategy for each player i.
+
+We represent profiles with dependent finite-support functions (dffun)
+|*)
+
+Section Profiles.
+
+  Implicit Type (N : finType).
+
+  (*| Profile for classical games |*)
+  Definition profile (N : finType) (X : N -> eqType) := {dffun forall i, X i}.
+
+  (*| Finite profile |*)
+  Definition fprofile N (X : N -> finType) := {dffun forall i, X i}.
+
+  (*| Change the strategy of a given player in a given profile |*)
+  Definition move N X (p : profile X) (i : N) (pi : X i) : profile X :=
+    [ffun j => match boolP (i == j) with
+               | AltTrue h => eq_rect _ X pi _ (eqP h)
+               | AltFalse _ =>  p j
+               end].
+
+
+  (*| Profile for incomplete games |*)
+  Definition iprofile N (T : N -> finType) (X : N -> eqType) :=
+    {dffun forall i, T i -> X i}.
+
+  (*| Transform an iprofile to a profile such as support is the set of dependent pairs (i,t_i) |*)
+  Definition iprofile_flatten N (T : N -> finType) X (p : iprofile T X)
+    : profile (fun it => X (projT1 it)) :=
+    [ffun it => p (projT1 it) (projT2 it)].
+
+  (*| Profile that will be played if player's types are known |*)
+  Definition proj_iprofile N (T : N -> finType) X (p : iprofile T X)
+    : profile T -> profile X :=
+    fun theta => [ffun i => p i (theta i)]
+.
+  Definition proj_flatprofile N (T : N -> finType) X
+             (p : profile (fun it => X (projT1 it)))
+    : profile T -> profile X :=
+    fun theta => [ffun i => p (existT _ i (theta i))].
+
+  Lemma proj_iprof_flatprof N (T : N -> finType) X (p : iprofile T X) theta :
+    (proj_iprofile p theta) = (proj_flatprofile (iprofile_flatten p) theta).
+  Proof.
+    by apply: eq_dffun => i; rewrite ffunE.
+  Qed.
+
+  Definition bmove N T X (p : iprofile T X) (i : N) ti xi
+    : iprofile T X :=
+    [ffun j => fun tj => match boolP (i == j) with
+                         | AltTrue h =>
+                           let ti' := eq_rect _ T ti _ (eqP h) in
+                           if ti' == tj
+                           then eq_rect i X xi j (eqP h)
+                           else p j tj
+                         | AltFalse _ => p j tj
+                         end].
+
+  Lemma move_bmove N T X (p : iprofile T X) (it : {i : N & T i})
+        (xi : X (projT1 it)) :
+    (@move _ _ (iprofile_flatten p) it xi)
+    = (iprofile_flatten (bmove p (projT2 it) xi)).
+  Proof.
+  apply eq_dffun => it' //=.
+  rewrite !ffunE.
+  case (boolP (@eq_op (Finite.eqType (tag_finType T)) it it')) => H1;
+                   case (boolP (projT1 it == projT1 it')) => H2 //=.
+  - case (boolP ((eq_rect _ _ (projT2 it) (projT1 it')  (@elimT
+      (@eq (Finite.sort N) _ _) _ eqP H2)) == (projT2 it'))) => H3.
+    + rewrite (rew_map X _ (eqP H1) xi).
+      by rewrite (Eqdep_dec.eq_proofs_unicity
+                    (@eqType_dec N) (f_equal _ (eqP H1))(eqP H2)).
+    + move/eqP in H3.
+      have Hcontra := projT2_eq (eqP H1).
+      by rewrite (Eqdep_dec.eq_proofs_unicity (@eqType_dec N)
+           (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
+  - move/eqP in H2.
+    by rewrite (eqP H1) in H2.
+  - case (boolP ((eq_rect _ _ (projT2 it) (projT1 it')  (@elimT
+        (@eq (Finite.sort N) _ _) _ eqP H2)) == (projT2 it'))) => H3 //.
+    have Hcontra := eq_sigT it it' (eqP H2) (eqP H3).
+    by move/eqP in H1.
+  Qed.
+
+End Profiles.
+
 
 
 (*|
@@ -82,111 +177,23 @@ Three forms of games are defined in the corresponding modules:
 
 |*)
 
-Section Games.
+
+
 
 (*|
-Profiles
---------
+Classical SNF games 
+-------------------
 
-A 'profile' is a dependent vector which contains a (X i) for all player i.
-Typically, a strategy profile is a strategy for each player i.
-
-We represent profiles with dependent finite-support functions (dffun)
+We define simultaneous SNF games with abstract outcomes, that may be different for eaech player.
 |*)
-
-  Section Profiles.
-
-    Implicit Type (N : finType).
-
-    (*| Profile for classical games |*)
-    Definition profile (N : finType) (X : N -> eqType) := {dffun forall i, X i}.
-
-    (*| Finite profile |*)
-    Definition fprofile N (X : N -> finType) := {dffun forall i, X i}.
-
-    (*| Change the strategy of a given player in a given profile |*)
-    Definition move N X (p : profile X) (i : N) (pi : X i) : profile X :=
-      [ffun j => match boolP (i == j) with
-                 | AltTrue h => eq_rect _ X pi _ (eqP h)
-                 | AltFalse _ =>  p j
-                 end].
-
-
-    (*| Profile for incomplete games |*)
-    Definition iprofile N (T : N -> finType) (X : N -> eqType) :=
-      {dffun forall i, T i -> X i}.
-
-    (*| Transform an iprofile to a profile such as support is the set of dependent pairs (i,t_i) |*)
-    Definition iprofile_flatten N (T : N -> finType) X (p : iprofile T X)
-      : profile (fun it => X (projT1 it)) :=
-      [ffun it => p (projT1 it) (projT2 it)].
-
-    Definition proj_iprofile N (T : N -> finType) X (p : iprofile T X)
-      : profile T -> profile X :=
-      fun theta => [ffun i => p i (theta i)].
-
-    Definition proj_flatprofile N (T : N -> finType) X
-               (p : profile (fun it => X (projT1 it)))
-     : profile T -> profile X :=
-      fun theta => [ffun i => p (existT _ i (theta i))].
-
-    Lemma proj_iprof_flatprof N (T : N -> finType) X (p : iprofile T X) theta :
-      (proj_iprofile p theta) = (proj_flatprofile (iprofile_flatten p) theta).
-    Proof.
-    by apply: eq_dffun => i; rewrite ffunE.
-    Qed.
-
-    Definition bmove N T X (p : iprofile T X) (i : N) ti xi
-      : iprofile T X :=
-      [ffun j => fun tj => match boolP (i == j) with
-                           | AltTrue h =>
-                             let ti' := eq_rect _ T ti _ (eqP h) in
-                               if ti' == tj
-                               then eq_rect i X xi j (eqP h)
-                               else p j tj
-                           | AltFalse _ => p j tj
-                           end].
-
-    Lemma move_bmove N T X (p : iprofile T X) (it : {i : N & T i})
-          (xi : X (projT1 it)) :
-      (@move _ _ (iprofile_flatten p) it xi)
-      = (iprofile_flatten (bmove p (projT2 it) xi)).
-    Proof.
-    apply eq_dffun => it' //=.
-    rewrite !ffunE.
-    case (boolP (@eq_op (Finite.eqType (tag_finType T)) it it')) => H1 ;
-    case (boolP (projT1 it == projT1 it')) => H2 //=.
-    - case (boolP ((eq_rect _ _ (projT2 it) (projT1 it')  (@elimT
-            (@eq (Finite.sort N) _ _) _ eqP H2)) == (projT2 it'))) => H3.
-      + rewrite (rew_map X _ (eqP H1) xi).
-        by rewrite (Eqdep_dec.eq_proofs_unicity
-           (@eqType_dec N) (f_equal _ (eqP H1))(eqP H2)).
-      + move/eqP in H3.
-        have Hcontra := projT2_eq (eqP H1).
-        by rewrite (Eqdep_dec.eq_proofs_unicity (@eqType_dec N)
-                (projT1_eq (eqP H1)) (eqP H2)) in Hcontra.
-    - move/eqP in H2.
-      by rewrite (eqP H1) in H2.
-    - case (boolP ((eq_rect _ _ (projT2 it) (projT1 it')  (@elimT
-            (@eq (Finite.sort N) _ _) _ eqP H2)) == (projT2 it'))) => H3 //.
-      have Hcontra := eq_sigT it it' (eqP H2) (eqP H3).
-      by move/eqP in H1.
-    Qed.
-
-  End Profiles.
-
-End Games.
-
 
 Module NFGame.
 
-  (* Classical SNF games *)
-
   Record game (player : finType) : Type :=
-    { outcome : player -> Type ;
-      action : player -> finType ;
-      utility : forall i, profile action -> outcome i ;
-      preceq : forall i, rel (outcome i) ;
+    { outcome : player -> Type;
+      action : player -> finType;
+      utility : forall i, profile action -> outcome i;
+      preceq : forall i, rel (outcome i);
     }.
 
   Definition NashEqb player (g : game player)
@@ -204,9 +211,9 @@ Module NFGame.
   Lemma NashEqP player (g : game player) (p : profile (action g)) :
     reflect (NashEq p) (NashEqb p).
   Proof.
-  case (boolP (NashEqb p)) ; constructor ; move: i.
-  - move/forallP => H i ; move: (H i).
-    move/forallP => H2 ai ; move: (H2 ai) => H0.
+  case (boolP (NashEqb p)); constructor; move: i.
+  - move/forallP => H i; move: (H i).
+    move/forallP => H2 ai; move: (H2 ai) => H0.
     exact: (negP H0).
   - move/forallPn => [] x.
     move/forallPn => [] y.
@@ -216,20 +223,28 @@ Module NFGame.
 
 End NFGame.
 
+
+(*|
+Hypergraphical games 
+--------------------
+
+Hypergraphical games are succinct representation of SNF games, where players play in some local games.
+Their global utility is the (abstract) sum of their local utility.
+|*)
+
 Module HGGame.
 
-  (* Hyper-graphical games with player-dependant-oplus-operator *)
 
   Record game (player : finType) : Type :=
-    { local_game : finType ;
-      plays : local_game -> pred player ;
-      outcome : player -> Type ;
-      outcome0 : forall i, outcome i ;
-      oplus : forall i, Monoid.com_law (outcome0 i) ;
-      preceq : forall i, rel (outcome i) ;
-      action : player -> finType ;
+    { local_game : finType;
+      plays : local_game -> pred player;
+      outcome : player -> Type;
+      outcome0 : forall i, outcome i;
+      oplus : forall i, Monoid.com_law (outcome0 i);
+      preceq : forall i, rel (outcome i);
+      action : player -> finType;
       local_utility : local_game ->
-                      forall i, profile action -> outcome i ;
+                      forall i, profile action -> outcome i;
     }.
 
   Definition global_utility player (g : game player) (i : player)
@@ -239,10 +254,10 @@ Module HGGame.
 
   Definition to_normal_form player (g : game player)
     : NFGame.game player :=
-    {| NFGame.outcome := outcome g ;
-       NFGame.preceq := @preceq _ g ;
-       NFGame.action := action g ;
-       NFGame.utility := @global_utility _ g ;
+    {| NFGame.outcome := outcome g;
+       NFGame.preceq := @preceq _ g;
+       NFGame.action := action g;
+       NFGame.utility := @global_utility _ g;
     |}.
 
   Definition NashEqb player (g : game player) :=
@@ -266,17 +281,26 @@ Module HGGame.
 End HGGame.
 
 
+
+(*|
+Incomplete games 
+----------------
+
+Incomplete games generalize Bayesian games and possibilistic games.
+
+Players don't know perfectly the world i.e. they ignore which game they are playing.
+|*)
+
 Module IGame.
 
-  (* Incomplete games such as Bayesian games and possibilistic games *)
 
   Record game (player : finType) : Type :=
-    { evalst : player -> eval_struct ;
-      signal : player -> finType ;
-      action : player -> finType ;
+    { evalst : player -> eval_struct;
+      signal : player -> finType;
+      action : player -> finType;
       utility : forall i : player,
-        profile action -> profile signal -> U (evalst i) ;
-      belief : forall i : player, profile signal -> W (evalst i) ;
+        profile action -> profile signal -> U (evalst i);
+      belief : forall i : player, profile signal -> W (evalst i);
     }.
 
   Definition GEutility player (g : game player) (i : player) t p :=
@@ -285,16 +309,16 @@ Module IGame.
      otimes (belief i theta) (utility i (proj_iprofile p theta) theta).
 
   Definition to_hggame player (g : game player) : HGGame.game _ :=
-    {| HGGame.local_game := [finType of fprofile (signal g)] ;
-       HGGame.plays := fun theta it => theta (projT1 it) == projT2 it ;
-       HGGame.outcome := fun it => V _ ;
-       HGGame.outcome0 := fun it => V0 _ ;
-       HGGame.oplus := fun it => oplus _ ;
-       HGGame.preceq := fun it => @preceq_V _ ;
-       HGGame.action := fun it => action g _ ;
+    {| HGGame.local_game := [finType of fprofile (signal g)];
+       HGGame.plays := fun theta it => theta (projT1 it) == projT2 it;
+       HGGame.outcome := fun it => V _;
+       HGGame.outcome0 := fun it => V0 _;
+       HGGame.oplus := fun it => oplus _;
+       HGGame.preceq := fun it => @preceq_V _;
+       HGGame.action := fun it => action g _;
        HGGame.local_utility := fun theta it p =>
            otimes (belief (projT1 it) theta)
-              (utility (projT1 it) (proj_flatprofile p theta) theta) ;
+              (utility (projT1 it) (proj_flatprofile p theta) theta);
     |}.
 
   Definition to_normal_form player (g : game player)
@@ -320,10 +344,10 @@ Module IGame.
         (p : iprofile (signal g) (action g)) :
     reflect (NashEq p) (NashEqb p).
   Proof.
-  case (boolP (NashEqb p)) ; constructor ; move: i.
-  - move/forallP => H i ; move: (H i).
-    move/forallP => H2 t ; move: (H2 t).
-    move/forallP => H3 ai ; move: (H3 ai) => H0.
+  case (boolP (NashEqb p)); constructor; move: i.
+  - move/forallP => H i; move: (H i).
+    move/forallP => H2 t; move: (H2 t).
+    move/forallP => H3 ai; move: (H3 ai) => H0.
     exact: negP H0.
   - move/forallPn => [] x.
     move/forallPn => [] y.
@@ -335,6 +359,16 @@ Module IGame.
 End IGame.
 
 
+
+(*|
+Howson-Rosenthal-like transformation
+------------------------------------
+
+We cast any incomplete game to a graphical game where players are the dependent pairs (player,signal) of the initial I-Game.
+
+We show that erevy 'expected utility' value in the IGame is equal its corresponding 'global utility' value in the HG-Game.
+Thus, Nash equilibria are in correspondance.
+|*)
 Section HR.
 
   Lemma HowsonRosenthal :
@@ -372,9 +406,9 @@ Section HR.
     <-> IGame.NashEq p.
   Proof.
   split => H.
-  - apply/IGame.NashEqP ; move/HGGame.NashEqP in H.
+  - apply/IGame.NashEqP; move/HGGame.NashEqP in H.
     by rewrite -(HowsonRosenthal_NashEqb p).
-  - apply/HGGame.NashEqP ; move/IGame.NashEqP in H.
+  - apply/HGGame.NashEqP; move/IGame.NashEqP in H.
     by rewrite (HowsonRosenthal_NashEqb p).
   Qed.
 
